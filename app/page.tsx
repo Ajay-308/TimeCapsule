@@ -1,9 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { motion } from "framer-motion"
+import { useState, useEffect } from "react";
+
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   Check,
   ChevronRight,
@@ -19,37 +20,42 @@ import {
   Calendar,
   Mail,
   MapPin,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useTheme } from "next-themes"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "next-themes";
 
 export default function LandingPage() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
+    setMounted(true);
     const handleScroll = () => {
       if (window.scrollY > 10) {
-        setIsScrolled(true)
+        setIsScrolled(true);
       } else {
-        setIsScrolled(false)
+        setIsScrolled(false);
       }
-    }
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -59,45 +65,51 @@ export default function LandingPage() {
         staggerChildren: 0.1,
       },
     },
-  }
+  };
 
   const item = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 },
-  }
+  };
 
   const features = [
     {
       title: "Time-Locked Messages",
-      description: "Create encrypted messages that unlock automatically on your chosen future date.",
+      description:
+        "Create encrypted messages that unlock automatically on your chosen future date.",
       icon: <Clock className="size-5" />,
     },
     {
       title: "Smart Scheduling",
-      description: "Set precise unlock dates and times with automated delivery notifications.",
+      description:
+        "Set precise unlock dates and times with automated delivery notifications.",
       icon: <Calendar className="size-5" />,
     },
     {
       title: "Collaborative Capsules",
-      description: "Invite friends and family to contribute to shared time capsules together.",
+      description:
+        "Invite friends and family to contribute to shared time capsules together.",
       icon: <Users className="size-5" />,
     },
     {
       title: "Military-Grade Security",
-      description: "Your memories are protected with end-to-end encryption until unlock time.",
+      description:
+        "Your memories are protected with end-to-end encryption until unlock time.",
       icon: <Shield className="size-5" />,
     },
     {
       title: "Location-Based Unlock",
-      description: "Create geo-locked capsules that only open when you're in specific locations.",
+      description:
+        "Create geo-locked capsules that only open when you're in specific locations.",
       icon: <MapPin className="size-5" />,
     },
     {
       title: "Email Notifications",
-      description: "Get notified when your time capsules are ready to be opened and explored.",
+      description:
+        "Get notified when your time capsules are ready to be opened and explored.",
       icon: <Mail className="size-5" />,
     },
-  ]
+  ];
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -138,8 +150,17 @@ export default function LandingPage() {
             </Link>
           </nav>
           <div className="hidden md:flex gap-4 items-center">
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full">
-              {mounted && theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="rounded-full"
+            >
+              {mounted && theme === "dark" ? (
+                <Sun className="size-[18px]" />
+              ) : (
+                <Moon className="size-[18px]" />
+              )}
               <span className="sr-only">Toggle theme</span>
             </Button>
             <Link
@@ -154,11 +175,28 @@ export default function LandingPage() {
             </Button>
           </div>
           <div className="flex items-center gap-4 md:hidden">
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full">
-              {mounted && theme === "dark" ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="rounded-full"
+            >
+              {mounted && theme === "dark" ? (
+                <Sun className="size-[18px]" />
+              ) : (
+                <Moon className="size-[18px]" />
+              )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="size-5" />
+              ) : (
+                <Menu className="size-5" />
+              )}
               <span className="sr-only">Toggle menu</span>
             </Button>
           </div>
@@ -172,20 +210,40 @@ export default function LandingPage() {
             className="md:hidden absolute top-16 inset-x-0 bg-background/95 backdrop-blur-lg border-b"
           >
             <div className="container py-4 flex flex-col gap-4">
-              <Link href="#features" className="py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="#features"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 Features
               </Link>
-              <Link href="#testimonials" className="py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="#testimonials"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 Stories
               </Link>
-              <Link href="#pricing" className="py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="#pricing"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 Pricing
               </Link>
-              <Link href="#faq" className="py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+              <Link
+                href="#faq"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 FAQ
               </Link>
               <div className="flex flex-col gap-2 pt-2 border-t">
-                <Link href="#" className="py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                <Link
+                  href="#"
+                  className="py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Sign In
                 </Link>
                 <Button className="rounded-full">
@@ -209,22 +267,30 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="text-center max-w-3xl mx-auto mb-12"
             >
-              <Badge className="mb-4 rounded-full px-4 py-1.5 text-sm font-medium" variant="secondary">
+              <Badge
+                className="mb-4 rounded-full px-4 py-1.5 text-sm font-medium"
+                variant="secondary"
+              >
                 🚀 Now in Beta
               </Badge>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
                 Send Messages to Your Future Self
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Create encrypted digital time capsules that unlock on future dates. Preserve memories, set goals, and
-                surprise yourself with messages from the past.
+                Create encrypted digital time capsules that unlock on future
+                dates. Preserve memories, set goals, and surprise yourself with
+                messages from the past.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="rounded-full h-12 px-8 text-base">
                   Create Your First Capsule
                   <ArrowRight className="ml-2 size-4" />
                 </Button>
-                <Button size="lg" variant="outline" className="rounded-full h-12 px-8 text-base bg-transparent">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-full h-12 px-8 text-base bg-transparent"
+                >
                   See How It Works
                 </Button>
               </div>
@@ -271,7 +337,9 @@ export default function LandingPage() {
         <section className="w-full py-12 border-y bg-muted/30">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <p className="text-sm font-medium text-muted-foreground">Trusted by memory keepers worldwide</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Trusted by memory keepers worldwide
+              </p>
               <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12 lg:gap-16">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Image
@@ -298,15 +366,18 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="flex flex-col items-center justify-center space-y-4 text-center mb-12"
             >
-              <Badge className="rounded-full px-4 py-1.5 text-sm font-medium" variant="secondary">
+              <Badge
+                className="rounded-full px-4 py-1.5 text-sm font-medium"
+                variant="secondary"
+              >
                 Features
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
                 Everything You Need for Digital Time Travel
               </h2>
               <p className="max-w-[800px] text-muted-foreground md:text-lg">
-                Our comprehensive platform provides all the tools you need to create, secure, and deliver meaningful
-                messages across time.
+                Our comprehensive platform provides all the tools you need to
+                create, secure, and deliver meaningful messages across time.
               </p>
             </motion.div>
 
@@ -324,8 +395,12 @@ export default function LandingPage() {
                       <div className="size-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary mb-4">
                         {feature.icon}
                       </div>
-                      <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                      <p className="text-muted-foreground">{feature.description}</p>
+                      <h3 className="text-xl font-bold mb-2">
+                        {feature.title}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {feature.description}
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -346,13 +421,18 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="flex flex-col items-center justify-center space-y-4 text-center mb-16"
             >
-              <Badge className="rounded-full px-4 py-1.5 text-sm font-medium" variant="secondary">
+              <Badge
+                className="rounded-full px-4 py-1.5 text-sm font-medium"
+                variant="secondary"
+              >
                 How It Works
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Three Simple Steps to Time Travel</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Three Simple Steps to Time Travel
+              </h2>
               <p className="max-w-[800px] text-muted-foreground md:text-lg">
-                Creating your digital time capsule is simple. Write your message, set the date, and let time do the
-                rest.
+                Creating your digital time capsule is simple. Write your
+                message, set the date, and let time do the rest.
               </p>
             </motion.div>
 
@@ -375,7 +455,8 @@ export default function LandingPage() {
                 {
                   step: "03",
                   title: "Receive & Celebrate",
-                  description: "Get notified when your capsule unlocks and rediscover the memories you preserved.",
+                  description:
+                    "Get notified when your capsule unlocks and rediscover the memories you preserved.",
                 },
               ].map((step, i) => (
                 <motion.div
@@ -407,12 +488,18 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="flex flex-col items-center justify-center space-y-4 text-center mb-12"
             >
-              <Badge className="rounded-full px-4 py-1.5 text-sm font-medium" variant="secondary">
+              <Badge
+                className="rounded-full px-4 py-1.5 text-sm font-medium"
+                variant="secondary"
+              >
                 Stories
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Heartwarming Time Capsule Stories</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Heartwarming Time Capsule Stories
+              </h2>
               <p className="max-w-[800px] text-muted-foreground md:text-lg">
-                Real stories from people who've used TimeCapsule to connect with their future selves and loved ones.
+                Real stories from people who've used TimeCapsule to connect with
+                their future selves and loved ones.
               </p>
             </motion.div>
 
@@ -474,17 +561,24 @@ export default function LandingPage() {
                         {Array(testimonial.rating)
                           .fill(0)
                           .map((_, j) => (
-                            <Star key={j} className="size-4 text-yellow-500 fill-yellow-500" />
+                            <Star
+                              key={j}
+                              className="size-4 text-yellow-500 fill-yellow-500"
+                            />
                           ))}
                       </div>
-                      <p className="text-lg mb-6 flex-grow">{testimonial.quote}</p>
+                      <p className="text-lg mb-6 flex-grow">
+                        {testimonial.quote}
+                      </p>
                       <div className="flex items-center gap-4 mt-auto pt-4 border-t border-border/40">
                         <div className="size-10 rounded-full bg-muted flex items-center justify-center text-foreground font-medium">
                           {testimonial.author.charAt(0)}
                         </div>
                         <div>
                           <p className="font-medium">{testimonial.author}</p>
-                          <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {testimonial.role}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
@@ -496,7 +590,10 @@ export default function LandingPage() {
         </section>
 
         {/* Pricing Section */}
-        <section id="pricing" className="w-full py-20 md:py-32 bg-muted/30 relative overflow-hidden">
+        <section
+          id="pricing"
+          className="w-full py-20 md:py-32 bg-muted/30 relative overflow-hidden"
+        >
           <div className="absolute inset-0 -z-10 h-full w-full bg-white dark:bg-black bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#1f1f1f_1px,transparent_1px),linear-gradient(to_bottom,#1f1f1f_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_40%,transparent_100%)]"></div>
 
           <div className="container px-4 md:px-6 relative">
@@ -507,13 +604,18 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="flex flex-col items-center justify-center space-y-4 text-center mb-12"
             >
-              <Badge className="rounded-full px-4 py-1.5 text-sm font-medium" variant="secondary">
+              <Badge
+                className="rounded-full px-4 py-1.5 text-sm font-medium"
+                variant="secondary"
+              >
                 Pricing
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Simple, Transparent Pricing
+              </h2>
               <p className="max-w-[800px] text-muted-foreground md:text-lg">
-                Start for free and upgrade as your time capsule collection grows. All plans include unlimited unlock
-                dates.
+                Start for free and upgrade as your time capsule collection
+                grows. All plans include unlimited unlock dates.
               </p>
             </motion.div>
 
@@ -535,8 +637,14 @@ export default function LandingPage() {
                       {
                         name: "Personal",
                         price: "Free",
-                        description: "Perfect for personal time capsules and memories.",
-                        features: ["Up to 5 time capsules", "Text messages only", "1GB storage", "Email notifications"],
+                        description:
+                          "Perfect for personal time capsules and memories.",
+                        features: [
+                          "Up to 5 time capsules",
+                          "Text messages only",
+                          "1GB storage",
+                          "Email notifications",
+                        ],
                         cta: "Start Free",
                       },
                       {
@@ -556,7 +664,8 @@ export default function LandingPage() {
                       {
                         name: "Legacy",
                         price: "$29",
-                        description: "For preserving memories across generations.",
+                        description:
+                          "For preserving memories across generations.",
                         features: [
                           "Unlimited time capsules",
                           "All media types",
@@ -586,10 +695,18 @@ export default function LandingPage() {
                           <CardContent className="p-6 flex flex-col h-full">
                             <h3 className="text-2xl font-bold">{plan.name}</h3>
                             <div className="flex items-baseline mt-4">
-                              <span className="text-4xl font-bold">{plan.price}</span>
-                              {plan.price !== "Free" && <span className="text-muted-foreground ml-1">/month</span>}
+                              <span className="text-4xl font-bold">
+                                {plan.price}
+                              </span>
+                              {plan.price !== "Free" && (
+                                <span className="text-muted-foreground ml-1">
+                                  /month
+                                </span>
+                              )}
                             </div>
-                            <p className="text-muted-foreground mt-2">{plan.description}</p>
+                            <p className="text-muted-foreground mt-2">
+                              {plan.description}
+                            </p>
                             <ul className="space-y-3 my-6 flex-grow">
                               {plan.features.map((feature, j) => (
                                 <li key={j} className="flex items-center">
@@ -616,8 +733,14 @@ export default function LandingPage() {
                       {
                         name: "Personal",
                         price: "Free",
-                        description: "Perfect for personal time capsules and memories.",
-                        features: ["Up to 5 time capsules", "Text messages only", "1GB storage", "Email notifications"],
+                        description:
+                          "Perfect for personal time capsules and memories.",
+                        features: [
+                          "Up to 5 time capsules",
+                          "Text messages only",
+                          "1GB storage",
+                          "Email notifications",
+                        ],
                         cta: "Start Free",
                       },
                       {
@@ -637,7 +760,8 @@ export default function LandingPage() {
                       {
                         name: "Legacy",
                         price: "$23",
-                        description: "For preserving memories across generations.",
+                        description:
+                          "For preserving memories across generations.",
                         features: [
                           "Unlimited time capsules",
                           "All media types",
@@ -667,10 +791,18 @@ export default function LandingPage() {
                           <CardContent className="p-6 flex flex-col h-full">
                             <h3 className="text-2xl font-bold">{plan.name}</h3>
                             <div className="flex items-baseline mt-4">
-                              <span className="text-4xl font-bold">{plan.price}</span>
-                              {plan.price !== "Free" && <span className="text-muted-foreground ml-1">/month</span>}
+                              <span className="text-4xl font-bold">
+                                {plan.price}
+                              </span>
+                              {plan.price !== "Free" && (
+                                <span className="text-muted-foreground ml-1">
+                                  /month
+                                </span>
+                              )}
                             </div>
-                            <p className="text-muted-foreground mt-2">{plan.description}</p>
+                            <p className="text-muted-foreground mt-2">
+                              {plan.description}
+                            </p>
                             <ul className="space-y-3 my-6 flex-grow">
                               {plan.features.map((feature, j) => (
                                 <li key={j} className="flex items-center">
@@ -706,12 +838,18 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="flex flex-col items-center justify-center space-y-4 text-center mb-12"
             >
-              <Badge className="rounded-full px-4 py-1.5 text-sm font-medium" variant="secondary">
+              <Badge
+                className="rounded-full px-4 py-1.5 text-sm font-medium"
+                variant="secondary"
+              >
                 FAQ
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Frequently Asked Questions</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Frequently Asked Questions
+              </h2>
               <p className="max-w-[800px] text-muted-foreground md:text-lg">
-                Find answers to common questions about creating and managing your digital time capsules.
+                Find answers to common questions about creating and managing
+                your digital time capsules.
               </p>
             </motion.div>
 
@@ -729,7 +867,8 @@ export default function LandingPage() {
                       "Don't worry! We'll send you email notifications as the unlock date approaches, and again when your capsule is ready to open. You can also view all your pending capsules in your dashboard at any time.",
                   },
                   {
-                    question: "Can I change the unlock date after creating a capsule?",
+                    question:
+                      "Can I change the unlock date after creating a capsule?",
                     answer:
                       "Yes, you can modify the unlock date of any capsule before it opens. However, once a capsule has unlocked, the date cannot be changed. This ensures the integrity of the time capsule experience.",
                   },
@@ -756,11 +895,16 @@ export default function LandingPage() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.3, delay: i * 0.05 }}
                   >
-                    <AccordionItem value={`item-${i}`} className="border-b border-border/40 py-2">
+                    <AccordionItem
+                      value={`item-${i}`}
+                      className="border-b border-border/40 py-2"
+                    >
                       <AccordionTrigger className="text-left font-medium hover:no-underline">
                         {faq.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
+                      <AccordionContent className="text-muted-foreground">
+                        {faq.answer}
+                      </AccordionContent>
                     </AccordionItem>
                   </motion.div>
                 ))}
@@ -787,11 +931,16 @@ export default function LandingPage() {
                 Ready to Send a Message to the Future?
               </h2>
               <p className="mx-auto max-w-[700px] text-primary-foreground/80 md:text-xl">
-                Join thousands of people who are already creating meaningful connections with their future selves and
-                loved ones through digital time capsules.
+                Join thousands of people who are already creating meaningful
+                connections with their future selves and loved ones through
+                digital time capsules.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <Button size="lg" variant="secondary" className="rounded-full h-12 px-8 text-base">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="rounded-full h-12 px-8 text-base"
+                >
                   Create Your First Capsule
                   <ArrowRight className="ml-2 size-4" />
                 </Button>
@@ -804,7 +953,8 @@ export default function LandingPage() {
                 </Button>
               </div>
               <p className="text-sm text-primary-foreground/80 mt-4">
-                Free to start. No credit card required. Your memories are safe with us.
+                Free to start. No credit card required. Your memories are safe
+                with us.
               </p>
             </motion.div>
           </div>
@@ -821,11 +971,14 @@ export default function LandingPage() {
                 <span>TimeCapsule</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Create meaningful connections across time with encrypted digital time capsules. Preserve memories and
-                surprise your future self.
+                Create meaningful connections across time with encrypted digital
+                time capsules. Preserve memories and surprise your future self.
               </p>
               <div className="flex gap-4">
-                <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -842,7 +995,10 @@ export default function LandingPage() {
                   </svg>
                   <span className="sr-only">Facebook</span>
                 </Link>
-                <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -859,7 +1015,10 @@ export default function LandingPage() {
                   </svg>
                   <span className="sr-only">Twitter</span>
                 </Link>
-                <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -884,22 +1043,34 @@ export default function LandingPage() {
               <h4 className="text-sm font-bold">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#features"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#pricing"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Pricing
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Security
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     API
                   </Link>
                 </li>
@@ -909,22 +1080,34 @@ export default function LandingPage() {
               <h4 className="text-sm font-bold">Resources</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Help Center
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Guides
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Community
                   </Link>
                 </li>
@@ -934,22 +1117,34 @@ export default function LandingPage() {
               <h4 className="text-sm font-bold">Company</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Careers
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Terms of Service
                   </Link>
                 </li>
@@ -958,16 +1153,26 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-col gap-4 sm:flex-row justify-between items-center border-t border-border/40 pt-8">
             <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} TimeCapsule. All rights reserved.
+              &copy; {new Date().getFullYear()} TimeCapsule. All rights
+              reserved.
             </p>
             <div className="flex gap-4">
-              <Link href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="#"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Privacy Policy
               </Link>
-              <Link href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="#"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Terms of Service
               </Link>
-              <Link href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="#"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Cookie Policy
               </Link>
             </div>
@@ -975,5 +1180,5 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }

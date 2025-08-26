@@ -71,4 +71,13 @@ export default defineSchema({
   })
     .index("by_unlocked", ["unlockedAt"])
     .index("by_moderated", ["isModerated"]),
+  files: defineTable({
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+    encryptionKey: v.string(),
+    uploadedBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_user", ["uploadedBy"]),
 });
