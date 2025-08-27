@@ -13,7 +13,7 @@ export const saveFileMetadata = mutation({
     fileType: v.string(),
     fileSize: v.number(),
     encryptionKey: v.string(),
-    userId: v.id("users"),
+    userId: v.string(),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("files", {

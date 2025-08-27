@@ -12,7 +12,7 @@ export default defineSchema({
 
   // Time Capsules
   capsules: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     title: v.string(),
     content: v.optional(v.string()),
     fileId: v.optional(v.id("_storage")),
@@ -77,7 +77,7 @@ export default defineSchema({
     fileType: v.string(),
     fileSize: v.number(),
     encryptionKey: v.string(),
-    uploadedBy: v.id("users"),
+    uploadedBy: v.string(),
     createdAt: v.number(),
   }).index("by_user", ["uploadedBy"]),
 });

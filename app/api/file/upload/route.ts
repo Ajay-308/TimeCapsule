@@ -10,7 +10,6 @@ export async function POST(req: Request) {
   }
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  const capsuleId = formData.get("capsuleId") as string;
 
   if (!file) {
     return new Response("No file uploaded", { status: 400 });
