@@ -2,7 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Users table
   users: defineTable({
     clerkId: v.string(),
     email: v.string(),
@@ -10,7 +9,6 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_clerk_id", ["clerkId"]),
 
-  // Time Capsules
   capsules: defineTable({
     userId: v.string(),
     title: v.string(),
@@ -18,19 +16,21 @@ export default defineSchema({
     fileId: v.optional(v.id("_storage")),
     encryptionKey: v.string(),
     unlockDate: v.number(),
+    location: v.optional(
+      v.object({
+        latitude: v.number(),
+        longitude: v.number(),
+        radius: v.number(),
+        placeName: v.optional(v.string()),
+      })
+    ),
+
     isUnlocked: v.boolean(),
     isOneTimeAccess: v.boolean(),
     isAccessed: v.boolean(),
     accessCount: v.number(),
     maxAccess: v.optional(v.number()),
     isPublic: v.boolean(),
-    location: v.optional(
-      v.object({
-        latitude: v.number(),
-        longitude: v.number(),
-        radius: v.number(), // meters
-      })
-    ),
     createdAt: v.number(),
     unlockedAt: v.optional(v.number()),
     lastAccessedAt: v.optional(v.number()),
@@ -40,7 +40,6 @@ export default defineSchema({
     .index("by_unlocked", ["isUnlocked"])
     .index("by_public", ["isPublic", "isUnlocked"]),
 
-  // Collaborative capsules
   collaborativeCapsules: defineTable({
     mainCapsuleId: v.id("capsules"),
     collaboratorUserId: v.id("users"),
@@ -49,7 +48,6 @@ export default defineSchema({
     canView: v.boolean(),
   }).index("by_capsule", ["mainCapsuleId"]),
 
-  // Unlock notifications
   notifications: defineTable({
     userId: v.id("users"),
     capsuleId: v.id("capsules"),
@@ -71,6 +69,7 @@ export default defineSchema({
   })
     .index("by_unlocked", ["unlockedAt"])
     .index("by_moderated", ["isModerated"]),
+
   files: defineTable({
     storageId: v.id("_storage"),
     fileName: v.string(),

@@ -21,3 +21,21 @@ export const syncUser = mutation({
     return { exists: false };
   },
 });
+
+export const getUser = query({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (user) {
+      return { exists: true, user };
+    }
+
+    return { exists: false };
+  },
+});
