@@ -5,6 +5,7 @@ export default defineSchema({
   users: defineTable({
     clerkId: v.string(),
     email: v.string(),
+    image: v.string(),
     name: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_clerk_id", ["clerkId"]),
@@ -70,7 +71,9 @@ export default defineSchema({
     .index("by_unlocked", ["unlockedAt"])
     .index("by_moderated", ["isModerated"]),
 
+  // schema.ts
   files: defineTable({
+    capsuleId: v.optional(v.id("capsules")),
     storageId: v.id("_storage"),
     fileName: v.string(),
     fileType: v.string(),

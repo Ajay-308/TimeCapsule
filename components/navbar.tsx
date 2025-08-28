@@ -6,22 +6,19 @@ import { motion } from "framer-motion";
 import { ChevronRight, Menu, X, Moon, Sun, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { SignInButton } from "@clerk/nextjs";
+import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { isSignedIn } = useUser();
 
   useEffect(() => {
     setMounted(true);
     const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -45,32 +42,35 @@ export default function Navbar() {
           </div>
           <span>TimeCapsule</span>
         </div>
-        <nav className="hidden md:flex gap-8">
-          <Link
-            href="#features"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Features
-          </Link>
-          <Link
-            href="#testimonials"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Stories
-          </Link>
-          <Link
-            href="#pricing"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Pricing
-          </Link>
-          <Link
-            href="#faq"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            FAQ
-          </Link>
-        </nav>
+        {!isSignedIn && (
+          <nav className="hidden md:flex gap-8">
+            <Link
+              href="#features"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Features
+            </Link>
+            <Link
+              href="#testimonials"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Stories
+            </Link>
+            <Link
+              href="#pricing"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="#faq"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              FAQ
+            </Link>
+          </nav>
+        )}
+
         <div className="hidden md:flex gap-4 items-center">
           <Button
             variant="ghost"
@@ -85,18 +85,21 @@ export default function Navbar() {
             )}
             <span className="sr-only">Toggle theme</span>
           </Button>
-          <div className="flex gap-2 ">
-            <SignInButton mode="modal">
-              <Button variant="ghost" className="py-2 text-sm font-medium">
-                Sign In
+          {isSignedIn ? (
+            <UserButton />
+          ) : (
+            <div className="flex gap-2">
+              <SignInButton mode="modal">
+                <Button variant="ghost" className="py-2 text-sm font-medium">
+                  Sign In
+                </Button>
+              </SignInButton>
+              <Button className="rounded-full">
+                Create Capsule
+                <ChevronRight className="ml-1 size-4" />
               </Button>
-            </SignInButton>
-
-            <Button className="rounded-full">
-              Create Capsule
-              <ChevronRight className="ml-1 size-4" />
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4 md:hidden">
           <Button
@@ -125,7 +128,6 @@ export default function Navbar() {
           </Button>
         </div>
       </div>
-      {/* Mobile menu */}
       {mobileMenuOpen && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -133,46 +135,58 @@ export default function Navbar() {
           exit={{ opacity: 0, y: -20 }}
           className="md:hidden absolute top-16 inset-x-0 bg-background/95 backdrop-blur-lg border-b"
         >
+          {!isSignedIn && (
+            <>
+              <Link
+                href="#features"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Features
+              </Link>
+              <Link
+                href="#testimonials"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Stories
+              </Link>
+              <Link
+                href="#pricing"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
+              </Link>
+              <Link
+                href="#faq"
+                className="py-2 text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                FAQ
+              </Link>
+            </>
+          )}
           <div className="container py-4 flex flex-col gap-4">
-            <Link
-              href="#features"
-              className="py-2 text-sm font-medium"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              href="#testimonials"
-              className="py-2 text-sm font-medium"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Stories
-            </Link>
-            <Link
-              href="#pricing"
-              className="py-2 text-sm font-medium"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Pricing
-            </Link>
-            <Link
-              href="#faq"
-              className="py-2 text-sm font-medium"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              FAQ
-            </Link>
             <div className="flex flex-col gap-2 pt-2 border-t">
-              <SignInButton mode="modal">
-                <Button variant="ghost" className="py-2 text-sm font-medium">
-                  Sign In
-                </Button>
-              </SignInButton>
-
-              <Button className="rounded-full">
-                Create Capsule
-                <ChevronRight className="ml-1 size-4" />
-              </Button>
+              {isSignedIn ? (
+                <UserButton />
+              ) : (
+                <>
+                  <SignInButton mode="modal">
+                    <Button
+                      variant="ghost"
+                      className="py-2 text-sm font-medium"
+                    >
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                  <Button className="rounded-full">
+                    Create Capsule
+                    <ChevronRight className="ml-1 size-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </motion.div>

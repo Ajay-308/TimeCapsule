@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   Plus,
   Clock,
@@ -22,7 +24,7 @@ import {
   Share2,
   TrendingUp,
   Archive,
-  Star,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,95 +40,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
-
-// Mock data - in real app this would come from API
-const mockCapsules = [
-  {
-    id: "1",
-    title: "My College Graduation Dreams",
-    message:
-      "Dear Future Me, I'm writing this on the eve of starting college...",
-    createdAt: "2020-08-15T10:30:00Z",
-    unlockDate: "2024-05-15T15:00:00Z",
-    isUnlocked: true,
-    isPublic: false,
-    collaborators: [],
-    attachments: 3,
-    views: 12,
-    likes: 5,
-  },
-  {
-    id: "2",
-    title: "New Year Resolutions 2024",
-    message:
-      "This year I want to focus on health, relationships, and career growth...",
-    createdAt: "2024-01-01T00:00:00Z",
-    unlockDate: "2025-01-01T00:00:00Z",
-    isUnlocked: false,
-    isPublic: false,
-    collaborators: [],
-    attachments: 1,
-    views: 0,
-    likes: 0,
-  },
-  {
-    id: "3",
-    title: "Family Vacation Memories",
-    message:
-      "What an amazing trip to Japan! I want to remember every detail...",
-    createdAt: "2023-07-20T14:30:00Z",
-    unlockDate: "2028-07-20T14:30:00Z",
-    isUnlocked: false,
-    isPublic: true,
-    collaborators: ["mom@example.com", "dad@example.com"],
-    attachments: 15,
-    views: 0,
-    likes: 0,
-  },
-  {
-    id: "4",
-    title: "Wedding Day Wishes",
-    message:
-      "To my future married self, I hope you're still as happy as I am today...",
-    createdAt: "2023-09-15T16:00:00Z",
-    unlockDate: "2024-09-15T16:00:00Z",
-    isUnlocked: false,
-    isPublic: false,
-    collaborators: ["partner@example.com"],
-    attachments: 8,
-    views: 0,
-    likes: 0,
-  },
-];
-
-const mockStats = {
-  totalCapsules: 4,
-  unlockedCapsules: 1,
-  totalViews: 12,
-  totalLikes: 5,
-};
+import { DashboardSkeleton } from "@/components/dashboardSkeleton";
+import Navbar from "@/components/navbar";
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  // Fetch data from Convex
+  const capsules = useQuery(api.capsules.listUserCapsules);
+  const stats = useQuery(api.capsules.userStats);
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
   };
 
-  const getDaysUntilUnlock = (unlockDate: string) => {
+  const getDaysUntilUnlock = (unlockTimestamp: number) => {
     const now = new Date();
-    const unlock = new Date(unlockDate);
+    const unlock = new Date(unlockTimestamp);
     const diffTime = unlock.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? diffDays : 0;
   };
 
-  const getProgressPercentage = (createdAt: string, unlockDate: string) => {
+  const getProgressPercentage = (createdAt: number, unlockDate: number) => {
     const created = new Date(createdAt);
     const unlock = new Date(unlockDate);
     const now = new Date();
@@ -137,50 +78,36 @@ export default function DashboardPage() {
     return Math.min(Math.max((elapsedTime / totalTime) * 100, 0), 100);
   };
 
-  const filteredCapsules = mockCapsules.filter((capsule) => {
-    const matchesSearch = capsule.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "unlocked" && capsule.isUnlocked) ||
-      (activeTab === "locked" && !capsule.isUnlocked) ||
-      (activeTab === "collaborative" && capsule.collaborators.length > 0) ||
-      (activeTab === "public" && capsule.isPublic);
+  const getCollaboratorCount = (capsuleId: string) => {
+    // This would need a separate query for collaborative capsules
+    // For now, returning 0 but you can add this query later
+    return 0;
+  };
 
-    return matchesSearch && matchesTab;
-  });
+  const filteredCapsules =
+    capsules?.filter((capsule) => {
+      const matchesSearch = capsule.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const collaboratorCount = getCollaboratorCount(capsule._id);
+
+      const matchesTab =
+        activeTab === "all" ||
+        (activeTab === "unlocked" && capsule.isUnlocked) ||
+        (activeTab === "locked" && !capsule.isUnlocked) ||
+        (activeTab === "collaborative" && collaboratorCount > 0) ||
+        (activeTab === "public" && capsule.isPublic);
+
+      return matchesSearch && matchesTab;
+    }) || [];
+
+  if (capsules === undefined || stats === undefined) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-background/80 border-b">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2 font-bold">
-            <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground">
-              <Clock className="size-4" />
-            </div>
-            <span>TimeCapsule</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Bell className="size-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="size-4" />
-            </Button>
-            <Avatar className="size-8">
-              <AvatarImage
-                src="/placeholder.svg?height=32&width=32"
-                alt="User"
-              />
-              <AvatarFallback>
-                <User className="size-4" />
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="container py-8">
         <motion.div
@@ -212,7 +139,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-primary">
-                  {mockStats.totalCapsules}
+                  {stats.totalCapsules}
                 </div>
                 <p className="text-sm text-muted-foreground">Total Capsules</p>
               </CardContent>
@@ -220,7 +147,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-green-500">
-                  {mockStats.unlockedCapsules}
+                  {stats.unlockedCapsules}
                 </div>
                 <p className="text-sm text-muted-foreground">Unlocked</p>
               </CardContent>
@@ -228,7 +155,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-blue-500">
-                  {mockStats.totalViews}
+                  {stats.totalViews}
                 </div>
                 <p className="text-sm text-muted-foreground">Total Views</p>
               </CardContent>
@@ -236,7 +163,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-pink-500">
-                  {mockStats.totalLikes}
+                  {stats.totalLikes}
                 </div>
                 <p className="text-sm text-muted-foreground">Total Likes</p>
               </CardContent>
@@ -295,149 +222,157 @@ export default function DashboardPage() {
                 </Card>
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredCapsules.map((capsule, index) => (
-                    <motion.div
-                      key={capsule.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-lg truncate">
-                                {capsule.title}
-                              </CardTitle>
-                              <div className="flex items-center gap-2 mt-1">
-                                {capsule.isUnlocked ? (
-                                  <Badge
-                                    variant="default"
-                                    className="bg-green-500"
+                  {filteredCapsules.map((capsule, index) => {
+                    const collaboratorCount = getCollaboratorCount(capsule._id);
+                    const daysUntilUnlock = getDaysUntilUnlock(
+                      capsule.unlockDate
+                    );
+                    const progress = getProgressPercentage(
+                      capsule.createdAt,
+                      capsule.unlockDate
+                    );
+
+                    return (
+                      <motion.div
+                        key={capsule._id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                      >
+                        <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-lg truncate">
+                                  {capsule.title}
+                                </CardTitle>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {capsule.isUnlocked ? (
+                                    <Badge
+                                      variant="default"
+                                      className="bg-green-500"
+                                    >
+                                      <Unlock className="size-3 mr-1" />
+                                      Unlocked
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary">
+                                      <Lock className="size-3 mr-1" />
+                                      {daysUntilUnlock} days
+                                    </Badge>
+                                  )}
+                                  {collaboratorCount > 0 && (
+                                    <Badge variant="outline">
+                                      <Users className="size-3 mr-1" />
+                                      {collaboratorCount + 1}
+                                    </Badge>
+                                  )}
+                                  {capsule.isPublic && (
+                                    <Badge variant="outline">
+                                      <Eye className="size-3 mr-1" />
+                                      Public
+                                    </Badge>
+                                  )}
+                                  {capsule.location && (
+                                    <Badge variant="outline">
+                                      <MapPin className="size-3 mr-1" />
+                                      Location
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
                                   >
-                                    <Unlock className="size-3 mr-1" />
-                                    Unlocked
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary">
-                                    <Lock className="size-3 mr-1" />
-                                    {getDaysUntilUnlock(
-                                      capsule.unlockDate
-                                    )}{" "}
-                                    days
-                                  </Badge>
-                                )}
-                                {capsule.collaborators.length > 0 && (
-                                  <Badge variant="outline">
-                                    <Users className="size-3 mr-1" />
-                                    {capsule.collaborators.length + 1}
-                                  </Badge>
-                                )}
-                                {capsule.isPublic && (
-                                  <Badge variant="outline">
-                                    <Eye className="size-3 mr-1" />
-                                    Public
-                                  </Badge>
+                                    <MoreHorizontal className="size-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Edit className="size-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Share2 className="size-4 mr-2" />
+                                    Share
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Archive className="size-4 mr-2" />
+                                    Archive
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-destructive">
+                                    <Trash2 className="size-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {capsule.content ||
+                                "No content preview available"}
+                            </p>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progress</span>
+                                <span>{Math.round(progress)}%</span>
+                              </div>
+                              <Progress value={progress} className="h-1" />
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="size-3" />
+                                  {formatDate(capsule.unlockDate)}
+                                </span>
+                                {capsule.fileId && <span>1 file</span>}
+                                {capsule.location?.placeName && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="size-3" />
+                                    {capsule.location.placeName}
+                                  </span>
                                 )}
                               </div>
+                              <div className="flex items-center gap-2">
+                                <span className="flex items-center gap-1">
+                                  <Eye className="size-3" />
+                                  {capsule.accessCount}
+                                </span>
+                              </div>
                             </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8"
-                                >
-                                  <MoreHorizontal className="size-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Edit className="size-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Share2 className="size-4 mr-2" />
-                                  Share
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Archive className="size-4 mr-2" />
-                                  Archive
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">
-                                  <Trash2 className="size-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {capsule.message}
-                          </p>
 
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>Progress</span>
-                              <span>
-                                {Math.round(
-                                  getProgressPercentage(
-                                    capsule.createdAt,
-                                    capsule.unlockDate
-                                  )
-                                )}
-                                %
-                              </span>
-                            </div>
-                            <Progress
-                              value={getProgressPercentage(
-                                capsule.createdAt,
-                                capsule.unlockDate
-                              )}
-                              className="h-1"
-                            />
-                          </div>
+                            {/* One-time access indicator */}
+                            {capsule.isOneTimeAccess && !capsule.isAccessed && (
+                              <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                                ⚠️ One-time access only
+                              </div>
+                            )}
 
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-3">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="size-3" />
-                                {formatDate(capsule.unlockDate)}
-                              </span>
-                              {capsule.attachments > 0 && (
-                                <span>{capsule.attachments} files</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="flex items-center gap-1">
-                                <Eye className="size-3" />
-                                {capsule.views}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Star className="size-3" />
-                                {capsule.likes}
-                              </span>
-                            </div>
-                          </div>
-
-                          <Link href={`/capsule/${capsule.id}`}>
-                            <Button
-                              className="w-full rounded-full"
-                              variant={
-                                capsule.isUnlocked ? "default" : "outline"
-                              }
-                            >
-                              {capsule.isUnlocked
-                                ? "View Capsule"
-                                : "View Details"}
-                            </Button>
-                          </Link>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+                            <Link href={`/capsule/${capsule._id}`}>
+                              <Button
+                                className="w-full rounded-full"
+                                variant={
+                                  capsule.isUnlocked ? "default" : "outline"
+                                }
+                              >
+                                {capsule.isUnlocked
+                                  ? "View Capsule"
+                                  : "View Details"}
+                              </Button>
+                            </Link>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>

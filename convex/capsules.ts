@@ -1,7 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { haversineDistance } from "./_utils/distance";
-
 export const create = mutation({
   args: {
     title: v.string(),
@@ -23,12 +22,14 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
+
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
 
     if (!user) throw new Error("User not provisioned");
+
     const capsuleId = await ctx.db.insert("capsules", {
       userId: user._id,
       title: args.title,
@@ -51,7 +52,6 @@ export const create = mutation({
     return { capsuleId };
   },
 });
-
 export const getCapsule = query({
   args: {
     capsuleId: v.id("capsules"),
@@ -61,12 +61,12 @@ export const getCapsule = query({
   handler: async (ctx, args) => {
     const capsule = await ctx.db.get(args.capsuleId);
     if (!capsule) throw new Error("Capsule not found");
+
     const now = Date.now();
     if (capsule.unlockDate && capsule.unlockDate > now) {
-      // capsule abhi bhi lock hi rahega
-      return { locked: true, reason: "Unlock date yet not reached" };
+      return { locked: true, reason: "Unlock date not reached yet" };
     }
-    // location based unlock here
+
     if (capsule.location) {
       if (args.userLat === undefined || args.userLon === undefined) {
         return { locked: true, reason: "Location required but not provided" };
@@ -81,30 +81,42 @@ export const getCapsule = query({
         return { locked: true, reason: "Location not within allowed radius" };
       }
     }
+
     if (capsule.isOneTimeAccess && capsule.isAccessed) {
-      return {
-        locked: true,
-        reason: "Already accessed (one-time only)",
-      };
+      return { locked: true, reason: "Already accessed (one-time only)" };
     }
+
     if (capsule.maxAccess && capsule.accessCount >= capsule.maxAccess) {
-      return {
-        locked: true,
-        reason: "Maximum access limit reached",
-      };
+      return { locked: true, reason: "Maximum access limit reached" };
     }
-    // final sare check ke baad capsule ko unlock karte hai
+
     return { locked: false, capsuleId: capsule._id };
+  },
+});
+export const getCapsuleById = query({
+  args: { id: v.id("capsules") },
+  handler: async ({ db }, { id }) => {
+    const capsule = await db.get(id);
+    if (!capsule) return null;
+
+    return {
+      id: capsule._id,
+      title: capsule.title,
+      content: capsule.content,
+      fileId: capsule.fileId,
+      createdAt: capsule.createdAt,
+      encryptionKey: capsule.encryptionKey,
+      unlockDate: capsule.unlockDate,
+    };
   },
 });
 
 export const unlockCapsule = mutation({
-  args: {
-    capsuleId: v.id("capsules"),
-  },
+  args: { capsuleId: v.id("capsules") },
   handler: async (ctx, args) => {
     const capsule = await ctx.db.get(args.capsuleId);
     if (!capsule) throw new Error("Capsule not found");
+
     const now = Date.now();
 
     await ctx.db.patch(args.capsuleId, {
@@ -124,5 +136,84 @@ export const unlockCapsule = mutation({
         encryptionKey: capsule.encryptionKey,
       },
     };
+  },
+});
+
+export const getCapsuleFile = query({
+  args: { capsuleId: v.id("capsules") },
+  handler: async (ctx, args) => {
+    const capsule = await ctx.db.get(args.capsuleId);
+    if (!capsule?.fileId) return null;
+
+    const url = await ctx.storage.getUrl(capsule.fileId);
+    return { fileId: capsule.fileId, url };
+  },
+});
+
+export const listUserCapsules = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) throw new Error("User not provisioned from listUser");
+
+    return await ctx.db
+      .query("capsules")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .collect();
+  },
+});
+
+export const userStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) throw new Error("User not provisioned from userStats");
+
+    const capsules = await ctx.db
+      .query("capsules")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const totalCapsules = capsules.length;
+    const unlockedCapsules = capsules.filter((c) => c.isUnlocked).length;
+    const totalViews = capsules.reduce(
+      (sum, c) => sum + (c.accessCount ?? 0),
+      0
+    );
+
+    // pull likes from publicWall
+    const wall = await ctx.db.query("publicWall").collect();
+    const totalLikes = wall.reduce((sum, w) => sum + (w.likes ?? 0), 0);
+
+    return { totalCapsules, unlockedCapsules, totalViews, totalLikes };
+  },
+});
+
+export const likeCapsule = mutation({
+  args: { wallId: v.id("publicWall") },
+  handler: async (ctx, args) => {
+    const wallEntry = await ctx.db.get(args.wallId);
+    if (!wallEntry) throw new Error("Wall entry not found");
+
+    await ctx.db.patch(args.wallId, {
+      likes: wallEntry.likes + 1,
+    });
+
+    return { success: true };
   },
 });
