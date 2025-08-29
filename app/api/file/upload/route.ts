@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   const { storageId } = await res.json();
 
   await client.mutation(api.file.saveFileMetadata, {
-    userId: userId as any,
+    userClerkId: userId,
     storageId,
     fileName: file.name,
     fileType: file.type,

@@ -1,22 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Clock,
   Download,
   Share2,
+  Pause,
+  Play,
   Lock,
   Unlock,
   Calendar,
   Users,
   Eye,
   EyeOff,
-  Play,
-  Pause,
   FileText,
   ImageIcon,
   Video,
@@ -29,98 +28,79 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
-// Mock data - in real app this would come from API
-const mockCapsule = {
-  id: "1",
-  title: "My College Graduation Dreams",
-  message: `Dear Future Me,
+interface CapsulePageProps {
+  params: Promise<{ id: string }>;
+}
 
-I'm writing this on the eve of starting college, filled with so many dreams and hopes. I wonder if you remember how nervous and excited I was? I hope by the time you read this, you've achieved at least some of the goals I'm setting today.
-
-My biggest dreams right now:
-- Graduate with honors in Computer Science
-- Land a job at a tech company I admire
-- Travel to at least 5 new countries
-- Learn to play the guitar (I just bought one!)
-- Stay close with my high school friends
-
-I'm scared about leaving home, but I'm also so excited about the independence and all the new people I'll meet. I hope you're proud of how far we've come.
-
-Remember to always stay curious and kind.
-
-Love,
-Past You
-
-P.S. - I hope you still have that weird obsession with late-night pizza!`,
-  createdAt: "2020-08-15T10:30:00Z",
-  unlockDate: "2024-05-15T15:00:00Z",
-  isUnlocked: true,
-  isPublic: false,
-  oneTimeAccess: false,
-  hasBeenViewed: false,
-  geoLocked: false,
-  location: null,
-  creator: {
-    name: "Sarah Chen",
-    email: "sarah@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  collaborators: [],
-  attachments: [
-    {
-      id: "1",
-      name: "college-acceptance-letter.pdf",
-      type: "document",
-      size: "2.4 MB",
-      url: "/placeholder.svg?height=200&width=300",
-    },
-    {
-      id: "2",
-      name: "family-photo.jpg",
-      type: "image",
-      size: "1.8 MB",
-      url: "/placeholder.svg?height=300&width=400",
-    },
-    {
-      id: "3",
-      name: "graduation-song.mp3",
-      type: "audio",
-      size: "4.2 MB",
-      url: "#",
-    },
-  ],
-  stats: {
-    views: 1,
-    likes: 0,
-    comments: 0,
-  },
-};
-
-export default function CapsuleViewPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function CapsuleViewPage({ params }: CapsulePageProps) {
+  const { id } = use(params);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(180); // 3 minutes
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [copied, setCopied] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const capsule = mockCapsule; // In real app, fetch by params.id
+  const capsule = useQuery(api.capsules.getCapsuleById, {
+    id: id as Id<"capsules">,
+  });
+
+  const capsuleAccess = useQuery(api.capsules.getCapsule, {
+    capsuleId: id as Id<"capsules">,
+    userLat: userLocation?.lat,
+    userLon: userLocation?.lon,
+  });
+
+  const capsuleFiles = useQuery(api.capsules.getCapsuleWithFiles, {
+    capsuleId: id as Id<"capsules">,
+  });
+  const fileCapsuleUrl = capsuleFiles?.capsuleFileUrl;
+  console.log("capsule files ", capsuleFiles);
+
+  const unlockCapsule = useMutation(api.capsules.unlockCapsule);
 
   useEffect(() => {
-    if (capsule.isUnlocked && !capsule.hasBeenViewed) {
-      setShowUnlockAnimation(true);
-      setTimeout(() => setShowUnlockAnimation(false), 3000);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log("Location access denied:", error);
+        }
+      );
     }
-  }, [capsule.isUnlocked, capsule.hasBeenViewed]);
+  }, []);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const handleUnlock = async () => {
+    if (capsuleAccess && !capsuleAccess.locked && !isUnlocking) {
+      setIsUnlocking(true);
+      try {
+        await unlockCapsule({ capsuleId: id as Id<"capsules"> });
+        setShowUnlockAnimation(true);
+        setTimeout(() => setShowUnlockAnimation(false), 3000);
+      } catch (error) {
+        console.error("Failed to unlock capsule:", error);
+      } finally {
+        setIsUnlocking(false);
+      }
+    }
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -136,17 +116,61 @@ export default function CapsuleViewPage({
   };
 
   const getFileIcon = (type: string) => {
-    switch (type) {
-      case "image":
-        return <ImageIcon className="size-4" />;
-      case "video":
-        return <Video className="size-4" />;
-      case "audio":
-        return <Music className="size-4" />;
-      default:
-        return <FileText className="size-4" />;
+    if (type.startsWith("image/")) {
+      return <ImageIcon className="size-4" />;
+    } else if (type.startsWith("video/")) {
+      return <Video className="size-4" />;
+    } else if (type.startsWith("audio/")) {
+      return <Music className="size-4" />;
+    } else {
+      return <FileText className="size-4" />;
     }
   };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (
+      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i]
+    );
+  };
+
+  const getTimeRemaining = (unlockDate: number) => {
+    const now = Date.now();
+    const diff = unlockDate - now;
+
+    if (diff <= 0) return "Ready to unlock";
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    return `${days} days, ${hours} hours`;
+  };
+
+  const getProgress = (createdAt: number, unlockDate: number) => {
+    const now = Date.now();
+    const total = unlockDate - createdAt;
+    const elapsed = now - createdAt;
+    return Math.min((elapsed / total) * 100, 100);
+  };
+
+  // Loading state
+  if (!capsule || capsuleAccess === undefined) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+          <p className="text-muted-foreground">Loading capsule...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if capsule is unlocked (from the actual database data)
+  const isUnlocked = capsuleAccess && !capsuleAccess.locked;
+  const canUnlock = isUnlocked && Date.now() >= (capsule.unlockDate || 0);
 
   if (showUnlockAnimation) {
     return (
@@ -242,15 +266,15 @@ export default function CapsuleViewPage({
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] bg-[size:2rem_2rem]"></div>
                 <div className="relative text-center space-y-4">
                   <div className="size-16 mx-auto rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                    {capsule.isUnlocked ? (
+                    {isUnlocked ? (
                       <Unlock className="size-8 text-primary-foreground" />
                     ) : (
                       <Lock className="size-8 text-primary-foreground" />
                     )}
                   </div>
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold">
-                      {capsule.title}
+                    <h1 className="text-2xl md:text-3xl font-bold text-balance">
+                      {capsule.title || "Untitled Capsule"}
                     </h1>
                     <div className="flex items-center justify-center gap-4 mt-2 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
@@ -259,7 +283,11 @@ export default function CapsuleViewPage({
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="size-4" />
-                        <span>Unlocks {formatDate(capsule.unlockDate)}</span>
+                        <span>
+                          {capsule.unlockDate && (
+                            <>Unlocks {formatDate(capsule.unlockDate)}</>
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -273,7 +301,7 @@ export default function CapsuleViewPage({
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  {capsule.isUnlocked ? (
+                  {isUnlocked ? (
                     <Badge variant="default" className="bg-green-500">
                       <Unlock className="size-3 mr-1" />
                       Unlocked
@@ -286,9 +314,11 @@ export default function CapsuleViewPage({
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {capsule.isUnlocked
+                  {isUnlocked
                     ? "Ready to view"
-                    : "Waiting for unlock date"}
+                    : capsuleAccess?.locked
+                      ? capsuleAccess.reason
+                      : "Waiting for unlock conditions"}
                 </p>
               </CardContent>
             </Card>
@@ -297,36 +327,20 @@ export default function CapsuleViewPage({
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Users className="size-4" />
-                  <span className="font-medium">
-                    {capsule.collaborators.length === 0
-                      ? "Personal"
-                      : `${capsule.collaborators.length + 1} People`}
-                  </span>
+                  <span className="font-medium">Personal</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {capsule.collaborators.length === 0
-                    ? "Private capsule"
-                    : "Collaborative capsule"}
-                </p>
+                <p className="text-sm text-muted-foreground">Private capsule</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  {capsule.isPublic ? (
-                    <Eye className="size-4" />
-                  ) : (
-                    <EyeOff className="size-4" />
-                  )}
-                  <span className="font-medium">
-                    {capsule.isPublic ? "Public" : "Private"}
-                  </span>
+                  <EyeOff className="size-4" />
+                  <span className="font-medium">Private</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {capsule.isPublic
-                    ? "Visible to everyone"
-                    : "Only visible to you"}
+                  Only visible to you
                 </p>
               </CardContent>
             </Card>
@@ -337,16 +351,12 @@ export default function CapsuleViewPage({
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <Avatar className="size-12">
-                  <AvatarImage
-                    src={capsule.creator.avatar || "/placeholder.svg"}
-                    alt={capsule.creator.name}
-                  />
-                  <AvatarFallback>
-                    {capsule.creator.name.charAt(0)}
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                    U
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{capsule.creator.name}</h3>
+                  <h3 className="font-medium">You</h3>
                   <p className="text-sm text-muted-foreground">
                     Created this time capsule
                   </p>
@@ -356,22 +366,78 @@ export default function CapsuleViewPage({
           </Card>
 
           {/* Message Content */}
-          {capsule.isUnlocked ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="size-5" />
-                  Message from the Past
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                    {capsule.message}
-                  </pre>
+          {isUnlocked ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="size-5" />
+                    Message from the Past
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                      {capsule.content || "No message content available."}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Attachments section */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-blue-500" />
+                  Attachments
+                </h2>
+                <div className="mt-4 space-y-4">
+                  {/* Capsule file */}
+                  {fileCapsuleUrl && (
+                    <img
+                      src={fileCapsuleUrl}
+                      alt="Capsule File"
+                      className="w-60 h-60 object-cover rounded-lg shadow-md"
+                    />
+                  )}
+
+                  {/* Other files */}
+                  {capsuleFiles?.files?.map((file: any) => {
+                    if (file.fileType.startsWith("audio")) {
+                      const audioFileRef = useRef<HTMLAudioElement>(null);
+                      const [isPlayingFile, setIsPlayingFile] = useState(false);
+
+                      const toggleAudio = () => {
+                        if (!audioFileRef.current) return;
+
+                        if (isPlayingFile) {
+                          audioFileRef.current.pause();
+                        } else {
+                          audioFileRef.current.play();
+                        }
+                        setIsPlayingFile(!isPlayingFile);
+                      };
+
+                      return (
+                        <div key={file._id} className="flex items-center gap-2">
+                          <button
+                            onClick={toggleAudio}
+                            className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                          >
+                            {isPlayingFile ? (
+                              <Pause className="w-4 h-4" />
+                            ) : (
+                              <Play className="w-4 h-4" />
+                            )}
+                          </button>
+                          <audio ref={audioFileRef} src={file.url} />
+                          <span className="text-sm">{file.fileName}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </>
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
@@ -380,107 +446,64 @@ export default function CapsuleViewPage({
                   This capsule is still locked
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  Come back on {formatDate(capsule.unlockDate)} to read your
-                  message from the past.
+                  {capsuleAccess?.locked
+                    ? capsuleAccess.reason
+                    : capsule.unlockDate
+                      ? `Come back on ${formatDate(capsule.unlockDate)} to read your message from the past.`
+                      : "Waiting for unlock conditions to be met."}
                 </p>
-                <div className="max-w-md mx-auto">
-                  <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                    <span>Time remaining</span>
-                    <span>42 days, 15 hours</span>
+                {capsule.unlockDate && (
+                  <div className="max-w-md mx-auto mb-4">
+                    <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                      <span>Time remaining</span>
+                      <span>{getTimeRemaining(capsule.unlockDate)}</span>
+                    </div>
+                    <Progress
+                      value={getProgress(capsule.createdAt, capsule.unlockDate)}
+                      className="h-2"
+                    />
                   </div>
-                  <Progress value={75} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Attachments */}
-          {capsule.isUnlocked && capsule.attachments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="size-5" />
-                  Attachments ({capsule.attachments.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {capsule.attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center gap-4 p-4 border rounded-lg"
+                )}
+                {canUnlock && (
+                  <Button
+                    onClick={handleUnlock}
+                    className="mt-4"
+                    disabled={isUnlocking}
                   >
-                    <div className="size-10 rounded-lg bg-muted flex items-center justify-center">
-                      {getFileIcon(attachment.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{attachment.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {attachment.size}
-                      </p>
-                    </div>
-                    {attachment.type === "image" && (
-                      <div className="size-16 rounded-lg overflow-hidden bg-muted">
-                        <Image
-                          src={attachment.url || "/placeholder.svg"}
-                          alt={attachment.name}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                    {isUnlocking ? (
+                      <>
+                        <div className="size-4 mr-2 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                        Unlocking...
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="size-4 mr-2" />
+                        Unlock Capsule
+                      </>
                     )}
-                    {attachment.type === "audio" && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="size-8 bg-transparent"
-                          onClick={() => setIsPlaying(!isPlaying)}
-                        >
-                          {isPlaying ? (
-                            <Pause className="size-4" />
-                          ) : (
-                            <Play className="size-4" />
-                          )}
-                        </Button>
-                        <div className="w-24">
-                          <Progress
-                            value={(currentTime / duration) * 100}
-                            className="h-1"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8 bg-transparent"
-                    >
-                      <Download className="size-4" />
-                    </Button>
-                  </div>
-                ))}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
 
           {/* Stats and Actions */}
-          {capsule.isUnlocked && (
+          {isUnlocked && (
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Eye className="size-4" />
-                      <span>{capsule.stats.views} views</span>
+                      <span>1 view</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Heart className="size-4" />
-                      <span>{capsule.stats.likes} likes</span>
+                      <span>0 likes</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MessageCircle className="size-4" />
-                      <span>{capsule.stats.comments} comments</span>
+                      <span>0 comments</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

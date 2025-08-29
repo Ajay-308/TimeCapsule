@@ -100,13 +100,56 @@ export const getCapsuleById = query({
     if (!capsule) return null;
 
     return {
+      ...capsule,
       id: capsule._id,
-      title: capsule.title,
-      content: capsule.content,
-      fileId: capsule.fileId,
-      createdAt: capsule.createdAt,
-      encryptionKey: capsule.encryptionKey,
-      unlockDate: capsule.unlockDate,
+    };
+  },
+});
+export const getCapsuleWithFiles = query({
+  args: { capsuleId: v.id("capsules") },
+  handler: async (ctx, { capsuleId }) => {
+    if (!capsuleId) throw new Error("Capsule ID is required");
+
+    console.log("sab kuch sahi chal raha hai ");
+    // Fetch capsule
+    const capsule = await ctx.db.get(capsuleId);
+    if (!capsule) throw new Error("Capsule not found");
+
+    // Fetch files linked to capsule
+    const files = await ctx.db
+      .query("files")
+      .filter((q) => q.eq(q.field("capsuleId"), capsuleId))
+      .collect();
+
+    console.log("file fetched", files);
+    // Attach URLs to each file
+    const filesWithUrl = await Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        url: await ctx.storage.getUrl(file.storageId),
+      }))
+    );
+    console.log("file with url ", filesWithUrl);
+
+    // Determine if capsule is unlocked (based on unlockDate)
+    const now = Date.now();
+    const isUnlocked = capsule.unlockDate <= now;
+    let capsuleFileUrl;
+    if (capsule.fileId) {
+      capsuleFileUrl = await ctx.storage.getUrl(capsule.fileId);
+      console.log("capsule file with url ", capsuleFileUrl);
+    }
+
+    console.log("capsule with files", {
+      ...capsule,
+      files: filesWithUrl,
+      capsuleFileUrl,
+    });
+    return {
+      ...capsule,
+      files: filesWithUrl,
+      isUnlocked,
+      capsuleFileUrl,
     };
   },
 });

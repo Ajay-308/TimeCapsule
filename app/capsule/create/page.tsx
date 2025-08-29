@@ -1,11 +1,13 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   Clock,
@@ -31,7 +33,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function CreateCapsulePage() {
   const router = useRouter();
   const { toast } = useToast();
-
+  const createCapsuleMutation = useMutation(api.capsules.create);
+  const generateUploadUrl = useMutation(api.file.generateUploadUrl);
   const [capsuleType, setCapsuleType] = useState("personal");
   const [unlockDate, setUnlockDate] = useState("");
   const [unlockTime, setUnlockTime] = useState("");
@@ -43,6 +46,9 @@ export default function CreateCapsulePage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [geoLock, setGeoLock] = useState(false);
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number>();
+  const [longitude, setLongitude] = useState<number>();
+  const [radius, setRadius] = useState(100);
   const [oneTimeAccess, setOneTimeAccess] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,6 +72,39 @@ export default function CreateCapsulePage() {
 
   const removeAttachment = (index: number) => {
     setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  // Get current location for geo-locking
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
+          setLocation(
+            `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
+          );
+          toast({
+            title: "Location Set",
+            description: "Current location has been set for geo-locking.",
+          });
+        },
+        (error) => {
+          toast({
+            title: "Location Error",
+            description:
+              "Failed to get current location. Please enter manually.",
+            variant: "destructive",
+          });
+        }
+      );
+    } else {
+      toast({
+        title: "Not Supported",
+        description: "Geolocation is not supported by this browser.",
+        variant: "destructive",
+      });
+    }
   };
 
   const validateForm = () => {
@@ -116,10 +155,10 @@ export default function CreateCapsulePage() {
       return false;
     }
 
-    if (geoLock && !location.trim()) {
+    if (geoLock && (!latitude || !longitude)) {
       toast({
         title: "Location Required",
-        description: "Please specify a location for geo-locked capsules.",
+        description: "Please set a location for geo-locked capsules.",
         variant: "destructive",
       });
       return false;
@@ -128,47 +167,92 @@ export default function CreateCapsulePage() {
     return true;
   };
 
+  const uploadFile = async (file: File): Promise<string | null> => {
+    try {
+      // Generate upload URL
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload file to Convex storage
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("File upload failed");
+      }
+
+      const { storageId } = await result.json();
+      return storageId;
+    } catch (error) {
+      console.error("File upload error:", error);
+      toast({
+        title: "Upload Failed",
+        description: `Failed to upload ${file.name}`,
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const createCapsule = async () => {
+    console.log("call create function");
     if (!validateForm()) return;
 
     setIsCreating(true);
     try {
-      // Prepare form data for file uploads
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("message", message);
-      formData.append("unlockDate", unlockDate);
-      formData.append("unlockTime", unlockTime || "00:00");
-      formData.append("capsuleType", capsuleType);
-      formData.append("isPublic", isPublic.toString());
-      formData.append("geoLock", geoLock.toString());
-      formData.append("location", location);
-      formData.append("oneTimeAccess", oneTimeAccess.toString());
-      formData.append("collaborators", JSON.stringify(collaborators));
+      // Generate encryption key
+      const encryptionKey = crypto
+        .getRandomValues(new Uint8Array(32))
+        .reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
 
-      // Add attachments
-      attachments.forEach((file, index) => {
-        formData.append(`attachment_${index}`, file);
-      });
-
-      const response = await fetch("/api/capsules", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create capsule");
+      // Upload files if any
+      let fileId: string | undefined;
+      if (attachments.length > 0) {
+        // For simplicity, upload only the first file
+        // You can modify this to handle multiple files
+        const uploadedFileId = await uploadFile(attachments[0]);
+        if (uploadedFileId) {
+          fileId = uploadedFileId;
+        }
       }
 
-      const capsule = await response.json();
+      // Prepare unlock timestamp
+      const unlockTimestamp = new Date(
+        `${unlockDate}T${unlockTime || "00:00"}`
+      ).getTime();
+
+      // Prepare location data
+      const locationData =
+        geoLock && latitude && longitude
+          ? {
+              latitude,
+              longitude,
+              radius,
+              placeName: location,
+            }
+          : undefined;
+
+      // Create capsule
+      const result = await createCapsuleMutation({
+        title: title.trim(),
+        content: message.trim(),
+        fileId: fileId ? (fileId as Id<"_storage">) : undefined,
+        encryptionKey,
+        unlockDate: unlockTimestamp,
+        location: locationData,
+        isOneTimeAccess: oneTimeAccess,
+        isPublic: capsuleType === "public" ? true : isPublic,
+      });
 
       toast({
         title: "Time Capsule Created!",
-        description: `Your capsule "${title}" will unlock on ${new Date(unlockDate).toLocaleDateString()}.`,
+        description: `Your capsule "${title}" will unlock on ${new Date(unlockTimestamp).toLocaleDateString()}.`,
       });
 
       // Redirect to the created capsule or dashboard
-      router.push(`/capsule/${capsule.id}`);
+      router.push(`/capsule/${result.capsuleId}`);
     } catch (error) {
       console.error("Error creating capsule:", error);
       toast({
@@ -194,6 +278,8 @@ export default function CreateCapsulePage() {
 
     setIsSaving(true);
     try {
+      // For now, we'll save draft data to localStorage
+      // You can create a separate drafts table in your schema later
       const draftData = {
         title,
         message,
@@ -204,25 +290,22 @@ export default function CreateCapsulePage() {
         collaborators,
         geoLock,
         location,
+        latitude,
+        longitude,
+        radius,
         oneTimeAccess,
         isDraft: true,
+        savedAt: Date.now(),
       };
 
-      const response = await fetch("/api/capsules/draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(draftData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save draft");
-      }
+      localStorage.setItem(
+        `capsule_draft_${Date.now()}`,
+        JSON.stringify(draftData)
+      );
 
       toast({
         title: "Draft Saved",
-        description: "Your time capsule has been saved as a draft.",
+        description: "Your time capsule has been saved as a draft locally.",
       });
     } catch (error) {
       console.error("Error saving draft:", error);
@@ -332,6 +415,12 @@ export default function CreateCapsulePage() {
                     Invite friends and family to contribute. Everyone can add
                     their own messages before the capsule is sealed.
                   </p>
+                  <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm text-amber-800">
+                      Note: Collaborative features are coming soon. For now, you
+                      can create the capsule and share it manually.
+                    </p>
+                  </div>
                 </TabsContent>
                 <TabsContent value="public" className="mt-4">
                   <p className="text-sm text-muted-foreground">
@@ -359,6 +448,7 @@ export default function CreateCapsulePage() {
                   placeholder="Give your time capsule a memorable name..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  maxLength={100}
                 />
               </div>
 
@@ -370,6 +460,7 @@ export default function CreateCapsulePage() {
                     type="date"
                     value={unlockDate}
                     onChange={(e) => setUnlockDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
                   />
                 </div>
                 <div className="space-y-2">
@@ -391,6 +482,7 @@ export default function CreateCapsulePage() {
                   className="min-h-[200px] resize-none"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  maxLength={5000}
                 />
                 <p className="text-xs text-muted-foreground">
                   {message.length}/5000 characters
@@ -415,6 +507,7 @@ export default function CreateCapsulePage() {
                     value={newCollaborator}
                     onChange={(e) => setNewCollaborator(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && addCollaborator()}
+                    type="email"
                   />
                   <Button onClick={addCollaborator} size="icon">
                     <Plus className="size-4" />
@@ -459,9 +552,11 @@ export default function CreateCapsulePage() {
                 <p className="text-sm text-muted-foreground mb-2">
                   Drag and drop files here, or click to browse
                 </p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Currently supports one file at a time (Max 10MB)
+                </p>
                 <input
                   type="file"
-                  multiple
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
@@ -469,7 +564,7 @@ export default function CreateCapsulePage() {
                 />
                 <Button variant="outline" asChild>
                   <label htmlFor="file-upload" className="cursor-pointer">
-                    Choose Files
+                    Choose File
                   </label>
                 </Button>
               </div>
@@ -480,7 +575,14 @@ export default function CreateCapsulePage() {
                       key={index}
                       className="flex items-center justify-between p-2 bg-muted rounded-lg"
                     >
-                      <span className="text-sm truncate">{file.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm truncate block">
+                          {file.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -518,15 +620,82 @@ export default function CreateCapsulePage() {
                 </div>
                 <Switch checked={geoLock} onCheckedChange={setGeoLock} />
               </div>
+
               {geoLock && (
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="Enter address or coordinates..."
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location Description</Label>
+                    <Input
+                      id="location"
+                      placeholder="e.g., My childhood home, Central Park..."
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="latitude">Latitude</Label>
+                      <Input
+                        id="latitude"
+                        type="number"
+                        step="any"
+                        placeholder="40.7128"
+                        value={latitude || ""}
+                        onChange={(e) =>
+                          setLatitude(
+                            e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="longitude">Longitude</Label>
+                      <Input
+                        id="longitude"
+                        type="number"
+                        step="any"
+                        placeholder="-74.0060"
+                        value={longitude || ""}
+                        onChange={(e) =>
+                          setLongitude(
+                            e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="radius">Unlock Radius (meters)</Label>
+                    <Input
+                      id="radius"
+                      type="number"
+                      min="1"
+                      max="10000"
+                      value={radius}
+                      onChange={(e) =>
+                        setRadius(parseInt(e.target.value) || 100)
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Distance from the location where the capsule can be
+                      unlocked
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={getCurrentLocation}
+                    className="w-full"
+                  >
+                    <MapPin className="size-4 mr-2" />
+                    Use Current Location
+                  </Button>
                 </div>
               )}
 
