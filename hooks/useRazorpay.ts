@@ -1,66 +1,98 @@
-// hooks/useRazorpay.ts
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
+import { useCallback } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
+
+interface PaymentOptions {
+  name: string;
+  price: string;
+  billing: "monthly" | "annually";
 }
 
-export const useRazorpay = () => {
-  const loadScript = (src: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = src;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
+export function useRazorpay() {
+  const { user } = useUser();
+  const createOrder = useAction(api.paymentAction.createOrder);
+  const verifyPayment = useAction(api.paymentAction.verifyPayment);
 
-  const pay = async (plan: {
-    name: string;
-    price: string;
-    billing: string;
-  }) => {
-    const loaded = await loadScript(
-      "https://checkout.razorpay.com/v1/checkout.js"
-    );
-    if (!loaded) {
-      alert("Razorpay SDK failed to load");
-      return;
-    }
+  const pay = useCallback(
+    async ({ name, price, billing }: PaymentOptions) => {
+      if (!user) {
+        toast.error("Please sign in to continue");
+        return;
+      }
 
-    // convert price string like "$9" → integer paise
-    const numericPrice =
-      plan.price === "Free" ? 0 : parseFloat(plan.price.replace("$", ""));
-    const amount = numericPrice * 100 * (plan.billing === "annually" ? 12 : 1);
+      try {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        document.body.appendChild(script);
 
-    const orderData = await fetch("/api/payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount,
-        currency: "INR",
-        plan: `${plan.name}-${plan.billing}`,
-      }),
-    }).then((r) => r.json());
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+        });
+        const numericPrice = parseFloat(price.replace("$", ""));
+        const amount = Math.round(numericPrice * 100);
+        const order = await createOrder({
+          amount,
+          planName: name,
+          billing,
+        });
 
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: orderData.amount,
-      currency: orderData.currency,
-      name: "TimeCapsule",
-      description: `${plan.name} Plan (${plan.billing})`,
-      order_id: orderData.id,
-      notes: {
-        plan: plan.name,
-        billing: plan.billing,
-      },
-      theme: { color: "#3399cc" },
-    };
+        if (!order) {
+          throw new Error("Failed to create order");
+        }
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+          amount: order.amount,
+          currency: order.currency,
+          name: "TimeCapsule",
+          description: `${name} Plan - ${billing === "monthly" ? "Monthly" : "Annual"} Subscription`,
+          order_id: order.id,
+          prefill: {
+            name: user.fullName || "",
+            email: user.emailAddresses[0]?.emailAddress || "",
+          },
+          theme: {
+            color: "#3b82f6",
+          },
+          handler: async (response: any) => {
+            try {
+              const verification = await verifyPayment({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                planName: name,
+                billing,
+              });
 
-    const paymentObject = new window.Razorpay(options);
-    paymentObject.open();
-  };
+              if (verification.success) {
+                toast.success("Payment successful! Welcome to " + name);
+                window.location.href = "/dashboard";
+              } else {
+                toast.error("Payment verification failed");
+              }
+            } catch (error) {
+              console.error("Payment verification error:", error);
+              toast.error("Payment verification failed");
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              toast.info("Payment cancelled");
+            },
+          },
+        };
+        const razorpay = new (window as any).Razorpay(options);
+        razorpay.open();
+      } catch (error) {
+        console.error("Payment error:", error);
+        toast.error("Failed to initiate payment");
+      }
+    },
+    [user, createOrder, verifyPayment]
+  );
 
   return { pay };
-};
+}

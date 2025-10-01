@@ -7,8 +7,37 @@ export default defineSchema({
     email: v.string(),
     image: v.string(),
     name: v.optional(v.string()),
+    // Payment & Subscription fields
+    subscriptionPlan: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
+    subscriptionBilling: v.optional(
+      v.union(v.literal("monthly"), v.literal("annually"))
+    ),
+    subscriptionStartDate: v.optional(v.number()),
+    subscriptionEndDate: v.optional(v.number()),
+    subscriptionCancelledAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_clerk_id", ["clerkId"]),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_email", ["email"]),
+
+  // Payment orders table
+  orders: defineTable({
+    userId: v.string(),
+    orderId: v.string(),
+    paymentId: v.optional(v.string()),
+    signature: v.optional(v.string()),
+    amount: v.number(),
+    currency: v.string(),
+    planName: v.string(),
+    billing: v.union(v.literal("monthly"), v.literal("annually")),
+    status: v.string(), // created, paid, failed
+    createdAt: v.number(),
+    paidAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_orderId", ["orderId"])
+    .index("by_status", ["status"]),
 
   capsules: defineTable({
     userId: v.string(),
@@ -25,7 +54,6 @@ export default defineSchema({
         placeName: v.optional(v.string()),
       })
     ),
-
     isUnlocked: v.boolean(),
     isOneTimeAccess: v.boolean(),
     isAccessed: v.boolean(),
@@ -71,7 +99,6 @@ export default defineSchema({
     .index("by_unlocked", ["unlockedAt"])
     .index("by_moderated", ["isModerated"]),
 
-  // schema.ts
   files: defineTable({
     capsuleId: v.optional(v.id("capsules")),
     storageId: v.id("_storage"),

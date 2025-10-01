@@ -16,6 +16,8 @@ import type {
 import type * as _utils_distance from "../_utils/distance.js";
 import type * as capsules from "../capsules.js";
 import type * as file from "../file.js";
+import type * as paymentAction from "../paymentAction.js";
+import type * as paymentMutations from "../paymentMutations.js";
 import type * as user from "../user.js";
 
 /**
@@ -30,6 +32,8 @@ declare const fullApi: ApiFromModules<{
   "_utils/distance": typeof _utils_distance;
   capsules: typeof capsules;
   file: typeof file;
+  paymentAction: typeof paymentAction;
+  paymentMutations: typeof paymentMutations;
   user: typeof user;
 }>;
 export declare const api: FilterApi<
