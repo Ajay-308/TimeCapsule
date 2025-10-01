@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SignInButton } from "@clerk/nextjs";
+import { useRazorpay } from "@/hooks/useRazorpay";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Check,
-  ChevronRight,
-  Menu,
-  X,
-  Moon,
-  Sun,
   ArrowRight,
   Star,
   Clock,
@@ -43,6 +38,7 @@ export default function LandingPage() {
   const router = useRouter();
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
+  const { pay } = useRazorpay();
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -607,6 +603,13 @@ export default function LandingPage() {
                               ))}
                             </ul>
                             <Button
+                              onClick={() =>
+                                pay({
+                                  name: plan.name,
+                                  price: plan.price,
+                                  billing: "monthly",
+                                })
+                              }
                               className={`w-full mt-auto rounded-full ${plan.popular ? "bg-primary hover:bg-primary/90" : "bg-muted hover:bg-muted/80"}`}
                               variant={plan.popular ? "default" : "outline"}
                             >

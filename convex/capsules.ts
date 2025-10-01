@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { haversineDistance } from "./_utils/distance";
+
 export const create = mutation({
   args: {
     title: v.string(),

@@ -3,6 +3,7 @@
 import { useState, useEffect, use, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { CapsuleEncryption } from "@/lib/encryption";
 import {
   ArrowLeft,
   Clock,
@@ -40,7 +41,7 @@ interface CapsulePageProps {
 
 export default function CapsuleViewPage({ params }: CapsulePageProps) {
   const { id } = use(params);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [decryptUrl, setDecryptedUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [copied, setCopied] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
@@ -63,8 +64,56 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
   const capsuleFiles = useQuery(api.capsules.getCapsuleWithFiles, {
     capsuleId: id as Id<"capsules">,
   });
-  const fileCapsuleUrl = capsuleFiles?.capsuleFileUrl;
-  console.log("capsule files ", capsuleFiles);
+  useEffect(() => {
+    const decryptUrlfile = async () => {
+      if (capsuleFiles?.capsuleFileUrl && capsuleFiles?.encryptionKey) {
+        try {
+          // 1. Fetch stored encrypted hex string
+          const response = await fetch(capsuleFiles.capsuleFileUrl);
+          const encryptedHex = await response.text();
+
+          // 2. Decrypt → returns base64 string or ArrayBuffer of original file
+          let base64Content: string;
+          const decrypted = await CapsuleEncryption.decryptFile(
+            encryptedHex,
+            capsuleFiles.encryptionKey
+          );
+          console.log("decrypted:", decrypted);
+          // If decrypted is ArrayBuffer, convert to base64 string
+          if (decrypted instanceof ArrayBuffer) {
+            const uint8Array = new Uint8Array(decrypted);
+            base64Content = btoa(String.fromCharCode(...uint8Array));
+          } else {
+            base64Content = decrypted;
+          }
+          console.log("Decrypted Base64:-", base64Content);
+
+          // 3. Convert base64 → Uint8Array
+          const byteCharacters = atob(base64Content);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+
+          // 4. Rebuild Blob
+          const blob = new Blob([byteArray], {
+            type: capsuleFiles.files[0].fileType,
+          });
+          const url = URL.createObjectURL(blob);
+
+          // 5. Save to state
+          setDecryptedUrl(url);
+        } catch (error) {
+          console.error("Failed to decrypt file:", error);
+        }
+      }
+    };
+
+    decryptUrlfile();
+  }, [capsuleFiles]);
+
+  console.log("decryptedUrl:", decryptUrl);
 
   const unlockCapsule = useMutation(api.capsules.unlockCapsule);
 
@@ -392,9 +441,9 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                 </h2>
                 <div className="mt-4 space-y-4">
                   {/* Capsule file */}
-                  {fileCapsuleUrl && (
+                  {decryptUrl && (
                     <img
-                      src={fileCapsuleUrl}
+                      src={decryptUrl}
                       alt="Capsule File"
                       className="w-60 h-60 object-cover rounded-lg shadow-md"
                     />

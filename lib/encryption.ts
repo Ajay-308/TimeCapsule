@@ -55,11 +55,10 @@ export class CapsuleEncryption {
 
     return { encrypted: payload, key: masterKey };
   }
-
-  static async decrypt(
-    encryptedData: string,
+  static async decryptFile(
+    encryptedData: string, // hex
     masterKey: string
-  ): Promise<string> {
+  ): Promise<ArrayBuffer> {
     const data = CapsuleEncryption.fromHex(encryptedData);
 
     const salt = data.slice(0, SALT_LENGTH);
@@ -87,13 +86,11 @@ export class CapsuleEncryption {
       ["decrypt"]
     );
 
-    const plaintext = await crypto.subtle.decrypt(
+    return await crypto.subtle.decrypt(
       { name: "AES-GCM", iv },
       derivedKey,
       ciphertext
     );
-
-    return new TextDecoder().decode(plaintext);
   }
 
   // Helpers

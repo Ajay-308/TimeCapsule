@@ -29,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { error } from "console";
 
 export default function CreateCapsulePage() {
   const router = useRouter();
@@ -169,21 +170,22 @@ export default function CreateCapsulePage() {
 
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
-      // Generate upload URL
-      const uploadUrl = await generateUploadUrl();
+      const formData = new FormData();
+      formData.append("file", file);
+      console.log("uploading file ", file.name);
+      console.log("formData", formData.get("file"));
 
-      // Upload file to Convex storage
-      const result = await fetch(uploadUrl, {
+      const res = await fetch("/api/file/upload", {
         method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+        body: formData,
       });
-
-      if (!result.ok) {
-        throw new Error("File upload failed");
+      if (!res.ok) {
+        console.error("Upload failed with status:", res.status);
       }
 
-      const { storageId } = await result.json();
+      if (!res.ok) throw new Error("Upload failed");
+
+      const { storageId } = await res.json();
       return storageId;
     } catch (error) {
       console.error("File upload error:", error);
