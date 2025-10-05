@@ -2,8 +2,9 @@ import type React from "react";
 import "@/styles/globals.css";
 import { Inter } from "next/font/google";
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/provider/theme-provider";
-import ConvexClerkProvider from "@/components/provider/convexClerkProvider";
+import { ThemeProvider } from "@/components/provider/themeProvider";
+import { ClerkProvider } from "@clerk/nextjs";
+import { TRPCProvider } from "@/components/provider/trpcProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,19 +21,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ConvexClerkProvider>
+    <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
+          <TRPCProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+            </ThemeProvider>
+          </TRPCProvider>
         </body>
       </html>
-    </ConvexClerkProvider>
+    </ClerkProvider>
   );
 }

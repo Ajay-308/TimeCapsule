@@ -1,10 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import {
   Plus,
   Clock,
@@ -17,8 +16,6 @@ import {
   Filter,
   MoreHorizontal,
   Settings,
-  Bell,
-  User,
   Trash2,
   Edit,
   Share2,
@@ -30,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -42,14 +38,15 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { DashboardSkeleton } from "@/components/dashboardSkeleton";
 import Navbar from "@/components/navbar";
+import { trpc } from "@/lib/trpc";
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  // Fetch data from Convex
-  const capsules = useQuery(api.capsules.listUserCapsules);
-  const stats = useQuery(api.capsules.userStats);
+  // Fetch data from tRPC
+  const { data: capsules } = trpc.capsule.listUserCapsules.useQuery();
+  const { data: stats } = trpc.capsule.userStats.useQuery();
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -81,15 +78,16 @@ export default function DashboardPage() {
   const getCollaboratorCount = (capsuleId: string) => {
     // This would need a separate query for collaborative capsules
     // For now, returning 0 but you can add this query later
+    console.log("Get collaborator count for capsule:", capsuleId);
     return 0;
   };
 
   const filteredCapsules =
-    capsules?.filter((capsule) => {
+    capsules?.filter((capsule: any) => {
       const matchesSearch = capsule.title
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-      const collaboratorCount = getCollaboratorCount(capsule._id);
+      const collaboratorCount = getCollaboratorCount(capsule.id);
 
       const matchesTab =
         activeTab === "all" ||
@@ -109,7 +107,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="container py-8">
+      <main className="container py-8 ml-18">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -222,8 +220,8 @@ export default function DashboardPage() {
                 </Card>
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredCapsules.map((capsule, index) => {
-                    const collaboratorCount = getCollaboratorCount(capsule._id);
+                  {filteredCapsules.map((capsule: any, index: any) => {
+                    const collaboratorCount = getCollaboratorCount(capsule.id);
                     const daysUntilUnlock = getDaysUntilUnlock(
                       capsule.unlockDate
                     );
@@ -234,7 +232,7 @@ export default function DashboardPage() {
 
                     return (
                       <motion.div
-                        key={capsule._id}
+                        key={capsule.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -344,7 +342,7 @@ export default function DashboardPage() {
                               <div className="flex items-center gap-2">
                                 <span className="flex items-center gap-1">
                                   <Eye className="size-3" />
-                                  {capsule.accessCount}
+                                  {capsule.accessCount || 0}
                                 </span>
                               </div>
                             </div>
@@ -356,7 +354,7 @@ export default function DashboardPage() {
                               </div>
                             )}
 
-                            <Link href={`/capsule/${capsule._id}`}>
+                            <Link href={`/capsule/${capsule.id}`}>
                               <Button
                                 className="w-full rounded-full"
                                 variant={

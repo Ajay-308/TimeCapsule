@@ -5,9 +5,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   Clock,
@@ -28,14 +25,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { error } from "console";
+import { trpc } from "@/lib/trpc";
+
+// Simple toast implementation
+const useToast = () => ({
+  toast: ({
+    title,
+    description,
+    variant,
+  }: {
+    title: string;
+    description: string;
+    variant?: string;
+  }) => {
+    console.log(
+      `${variant === "destructive" ? "❌" : "✅"} ${title}: ${description}`
+    );
+  },
+});
 
 export default function CreateCapsulePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const createCapsuleMutation = useMutation(api.capsules.create);
-  const generateUploadUrl = useMutation(api.file.generateUploadUrl);
+  const createCapsuleMutation = trpc.capsule.create.useMutation();
   const [capsuleType, setCapsuleType] = useState("personal");
   const [unlockDate, setUnlockDate] = useState("");
   const [unlockTime, setUnlockTime] = useState("");
@@ -83,7 +95,9 @@ export default function CreateCapsulePage() {
           setLatitude(position.coords.latitude);
           setLongitude(position.coords.longitude);
           setLocation(
-            `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
+            `${position.coords.latitude.toFixed(
+              6
+            )}, ${position.coords.longitude.toFixed(6)}`
           );
           toast({
             title: "Location Set",
@@ -237,10 +251,10 @@ export default function CreateCapsulePage() {
           : undefined;
 
       // Create capsule
-      const result = await createCapsuleMutation({
+      const result = await createCapsuleMutation.mutateAsync({
         title: title.trim(),
         content: message.trim(),
-        fileId: fileId ? (fileId as Id<"_storage">) : undefined,
+        fileId: fileId ? (fileId as string) : undefined,
         encryptionKey,
         unlockDate: unlockTimestamp,
         location: locationData,
@@ -250,7 +264,9 @@ export default function CreateCapsulePage() {
 
       toast({
         title: "Time Capsule Created!",
-        description: `Your capsule "${title}" will unlock on ${new Date(unlockTimestamp).toLocaleDateString()}.`,
+        description: `Your capsule "${title}" will unlock on ${new Date(
+          unlockTimestamp
+        ).toLocaleDateString()}.`,
       });
 
       // Redirect to the created capsule or dashboard
@@ -322,7 +338,7 @@ export default function CreateCapsulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background ml-18">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-background/80 border-b">
         <div className="container flex h-16 items-center justify-between">
@@ -483,7 +499,8 @@ export default function CreateCapsulePage() {
                   placeholder="Write your message to the future..."
                   className="min-h-[200px] resize-none"
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onChange={(e: any) => setMessage(e.target.value)}
                   maxLength={5000}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -709,7 +726,7 @@ export default function CreateCapsulePage() {
                     <Label>One-Time Access</Label>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Capsule can only be opened once, then it's permanently
+                    Capsule can only be opened once, then it&#39;s permanently
                     sealed
                   </p>
                 </div>

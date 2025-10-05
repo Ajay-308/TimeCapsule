@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "@/convex/_generated/api";
+import cloudinary from "@/lib/cloudnary";
 import { CapsuleEncryption } from "@/lib/encryption";
+import { prisma } from "@/server/db";
 
 export async function POST(req: Request) {
   try {
@@ -9,65 +9,63 @@ export async function POST(req: Request) {
     if (!userId) {
       return new Response("Unauthorized", { status: 401 });
     }
-
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+    if (!user) {
+      return new Response("User not found", { status: 404 });
+    }
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const capsuleId = formData.get("capsuleId") as string | null;
 
     if (!file) {
       return new Response("No file uploaded", { status: 400 });
     }
-
-    // Convert file → base64
     const fileBuffer = await file.arrayBuffer();
-    const fileContent = Buffer.from(fileBuffer).toString("base64");
-
-    const masterKey = process.env.FILE_ENCRYPTION_KEY;
-    if (!masterKey) {
-      return new Response("Missing FILE_ENCRYPTION_KEY", { status: 500 });
-    }
-
-    // Encrypt file
+    const base64Data = Buffer.from(fileBuffer).toString("base64");
+    const masterKey = process.env.FILE_ENCRYPTION_KEY!;
     const { encrypted, key } = await CapsuleEncryption.encrypt(
-      fileContent,
+      base64Data,
       masterKey
     );
 
-    // Initialize Convex client
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
-    const client = new ConvexHttpClient(convexUrl);
+    const encryptedBuffer = Buffer.from(encrypted, "base64");
+    const uploadResult = await new Promise<any>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `user_uploads/${userId}`,
+          resource_type: "auto",
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
 
-    // Get signed upload URL from Convex
-    const uploadUrl = await client.mutation(api.file.generateUploadUrl);
-    console.log("Generated upload URL:", uploadUrl);
-
-    // Upload encrypted file
-    const res = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: new Blob([encrypted], { type: "text/plain" }),
+      uploadStream.end(encryptedBuffer);
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("Upload failed:", res.status, errText);
-      return new Response("Upload failed", { status: 500 });
-    }
-
-    const { storageId } = await res.json();
-
-    // Save metadata in Convex
-    await client.mutation(api.file.saveFileMetadata, {
-      userClerkId: userId,
-      storageId,
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      encryptionKey: key,
+    const savedFile = await prisma.file.create({
+      data: {
+        capsuleId: capsuleId || null,
+        storageId: uploadResult.public_id,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        encryptionKey: key,
+        uploadedBy: user.id,
+      },
     });
 
-    return Response.json({ success: true, storageId });
-  } catch (err: any) {
-    console.error("Error in /api/file/upload:", err);
+    return Response.json({
+      success: true,
+      message: "File uploaded successfully",
+      fileUrl: uploadResult.secure_url,
+      file: savedFile,
+    });
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }

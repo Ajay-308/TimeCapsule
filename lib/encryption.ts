@@ -95,10 +95,10 @@ export class CapsuleEncryption {
 
   // Helpers
   private static concatBuffers(...buffers: Uint8Array[]): Uint8Array {
-    let totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
-    let result = new Uint8Array(totalLength);
+    const totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
+    const result = new Uint8Array(totalLength);
     let offset = 0;
-    for (let b of buffers) {
+    for (const b of buffers) {
       result.set(b, offset);
       offset += b.length;
     }

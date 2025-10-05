@@ -168,7 +168,7 @@ export default function Navbar() {
             </>
           )}
           <div className="container py-4 flex flex-col gap-4">
-            <div className="flex flex-col gap-2 pt-2 border-t">
+            <div className="flex flex-col gap-2 pt-2 border-t cursor-pointer hover:cursor-pointer">
               {isSignedIn ? (
                 <UserButton />
               ) : (
@@ -181,7 +181,7 @@ export default function Navbar() {
                       Sign In
                     </Button>
                   </SignInButton>
-                  <Button className="rounded-full">
+                  <Button className="rounded-full cursor-pointer">
                     Create Capsule
                     <ChevronRight className="ml-1 size-4" />
                   </Button>

@@ -3,6 +3,7 @@
 import { useState, useEffect, use, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import NextImage from "next/image";
 import { CapsuleEncryption } from "@/lib/encryption";
 import {
   ArrowLeft,
@@ -31,9 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { trpc } from "@/lib/trpc";
 
 interface CapsulePageProps {
   params: Promise<{ id: string }>;
@@ -41,7 +40,9 @@ interface CapsulePageProps {
 
 export default function CapsuleViewPage({ params }: CapsulePageProps) {
   const { id } = use(params);
-  const [decryptUrl, setDecryptedUrl] = useState<string | null>(null);
+  const audioFileRef = useRef<HTMLAudioElement>(null);
+  const [isPlayingFile, setIsPlayingFile] = useState(false);
+  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [copied, setCopied] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
@@ -51,71 +52,67 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
   } | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const capsule = useQuery(api.capsules.getCapsuleById, {
-    id: id as Id<"capsules">,
+  const { data: capsule } = trpc.capsule.getCapsuleById.useQuery({
+    id: id as string,
   });
-
-  const capsuleAccess = useQuery(api.capsules.getCapsule, {
-    capsuleId: id as Id<"capsules">,
+  const { data: capsuleFiles } = trpc.file.getFilesByCapsuleId.useQuery({
+    capsuleId: id as string,
+  });
+  const { data: capsuleAccess } = trpc.capsule.getCapsule.useQuery({
+    capsuleId: id as string,
     userLat: userLocation?.lat,
     userLon: userLocation?.lon,
   });
 
-  const capsuleFiles = useQuery(api.capsules.getCapsuleWithFiles, {
-    capsuleId: id as Id<"capsules">,
-  });
+  const unlockCapsuleMutation = trpc.capsule.unlockCapsule.useMutation();
+
   useEffect(() => {
-    const decryptUrlfile = async () => {
-      if (capsuleFiles?.capsuleFileUrl && capsuleFiles?.encryptionKey) {
-        try {
-          // 1. Fetch stored encrypted hex string
-          const response = await fetch(capsuleFiles.capsuleFileUrl);
-          const encryptedHex = await response.text();
+    const decryptUrlFile = async () => {
+      if (capsuleFiles && capsuleFiles.length > 0) {
+        const file = capsuleFiles[0]; // Get first file
+        if (file.storageId && file.encryptionKey) {
+          try {
+            // ✅ storageId = Cloudinary URL
+            const response = await fetch(file.storageId);
+            const encryptedHex = await response.text();
 
-          // 2. Decrypt → returns base64 string or ArrayBuffer of original file
-          let base64Content: string;
-          const decrypted = await CapsuleEncryption.decryptFile(
-            encryptedHex,
-            capsuleFiles.encryptionKey
-          );
-          console.log("decrypted:", decrypted);
-          // If decrypted is ArrayBuffer, convert to base64 string
-          if (decrypted instanceof ArrayBuffer) {
-            const uint8Array = new Uint8Array(decrypted);
-            base64Content = btoa(String.fromCharCode(...uint8Array));
-          } else {
-            base64Content = decrypted;
+            // ✅ Decrypt file
+            const decrypted = await CapsuleEncryption.decryptFile(
+              encryptedHex,
+              file.encryptionKey
+            );
+
+            // ✅ Convert to base64
+            let base64Content: string;
+            if (decrypted instanceof ArrayBuffer) {
+              const uint8Array = new Uint8Array(decrypted);
+              base64Content = btoa(String.fromCharCode(...uint8Array));
+            } else {
+              base64Content = decrypted;
+            }
+
+            // ✅ Convert to Blob
+            const byteCharacters = atob(base64Content);
+            const byteNumbers = Array.from(byteCharacters).map((ch) =>
+              ch.charCodeAt(0)
+            );
+            const byteArray = new Uint8Array(byteNumbers);
+
+            const blob = new Blob([byteArray], { type: file.fileType });
+            const url = URL.createObjectURL(blob);
+
+            setDecryptedUrl(url);
+          } catch (error) {
+            console.error("Failed to decrypt file:", error);
           }
-          console.log("Decrypted Base64:-", base64Content);
-
-          // 3. Convert base64 → Uint8Array
-          const byteCharacters = atob(base64Content);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-
-          // 4. Rebuild Blob
-          const blob = new Blob([byteArray], {
-            type: capsuleFiles.files[0].fileType,
-          });
-          const url = URL.createObjectURL(blob);
-
-          // 5. Save to state
-          setDecryptedUrl(url);
-        } catch (error) {
-          console.error("Failed to decrypt file:", error);
         }
       }
     };
 
-    decryptUrlfile();
+    decryptUrlFile();
   }, [capsuleFiles]);
 
-  console.log("decryptedUrl:", decryptUrl);
-
-  const unlockCapsule = useMutation(api.capsules.unlockCapsule);
+  console.log("decryptedUrl:", decryptedUrl);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -137,7 +134,7 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
     if (capsuleAccess && !capsuleAccess.locked && !isUnlocking) {
       setIsUnlocking(true);
       try {
-        await unlockCapsule({ capsuleId: id as Id<"capsules"> });
+        await unlockCapsuleMutation.mutateAsync({ capsuleId: id as string });
         setShowUnlockAnimation(true);
         setTimeout(() => setShowUnlockAnimation(false), 3000);
       } catch (error) {
@@ -148,8 +145,11 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
+  const toMs = (value: number | Date) =>
+    typeof value === "number" ? value : value.getTime();
+
+  const formatDate = (value: number | Date) => {
+    return new Date(value).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -186,9 +186,9 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
     );
   };
 
-  const getTimeRemaining = (unlockDate: number) => {
+  const getTimeRemaining = (unlockDate: number | Date) => {
     const now = Date.now();
-    const diff = unlockDate - now;
+    const diff = toMs(unlockDate) - now;
 
     if (diff <= 0) return "Ready to unlock";
 
@@ -198,10 +198,10 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
     return `${days} days, ${hours} hours`;
   };
 
-  const getProgress = (createdAt: number, unlockDate: number) => {
+  const getProgress = (createdAt: number | Date, unlockDate: number | Date) => {
     const now = Date.now();
-    const total = unlockDate - createdAt;
-    const elapsed = now - createdAt;
+    const total = toMs(unlockDate) - toMs(createdAt);
+    const elapsed = now - toMs(createdAt);
     return Math.min((elapsed / total) * 100, 100);
   };
 
@@ -219,7 +219,9 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
 
   // Check if capsule is unlocked (from the actual database data)
   const isUnlocked = capsuleAccess && !capsuleAccess.locked;
-  const canUnlock = isUnlocked && Date.now() >= (capsule.unlockDate || 0);
+  const canUnlock =
+    isUnlocked &&
+    (capsule.unlockDate ? Date.now() >= toMs(capsule.unlockDate) : false);
 
   if (showUnlockAnimation) {
     return (
@@ -253,7 +255,7 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background ml-18">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-background/80 border-b">
         <div className="container flex h-16 items-center justify-between">
@@ -366,8 +368,8 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                   {isUnlocked
                     ? "Ready to view"
                     : capsuleAccess?.locked
-                      ? capsuleAccess.reason
-                      : "Waiting for unlock conditions"}
+                    ? capsuleAccess.reason
+                    : "Waiting for unlock conditions"}
                 </p>
               </CardContent>
             </Card>
@@ -441,20 +443,19 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                 </h2>
                 <div className="mt-4 space-y-4">
                   {/* Capsule file */}
-                  {decryptUrl && (
-                    <img
-                      src={decryptUrl}
+                  {decryptedUrl && (
+                    <NextImage
+                      src={decryptedUrl}
                       alt="Capsule File"
+                      width={240}
+                      height={240}
                       className="w-60 h-60 object-cover rounded-lg shadow-md"
                     />
                   )}
 
                   {/* Other files */}
-                  {capsuleFiles?.files?.map((file: any) => {
+                  {capsuleFiles?.map((file: any) => {
                     if (file.fileType.startsWith("audio")) {
-                      const audioFileRef = useRef<HTMLAudioElement>(null);
-                      const [isPlayingFile, setIsPlayingFile] = useState(false);
-
                       const toggleAudio = () => {
                         if (!audioFileRef.current) return;
 
@@ -483,6 +484,7 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                         </div>
                       );
                     }
+                    return null;
                   })}
                 </div>
               </div>
@@ -498,8 +500,10 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                   {capsuleAccess?.locked
                     ? capsuleAccess.reason
                     : capsule.unlockDate
-                      ? `Come back on ${formatDate(capsule.unlockDate)} to read your message from the past.`
-                      : "Waiting for unlock conditions to be met."}
+                    ? `Come back on ${formatDate(
+                        capsule.unlockDate
+                      )} to read your message from the past.`
+                    : "Waiting for unlock conditions to be met."}
                 </p>
                 {capsule.unlockDate && (
                   <div className="max-w-md mx-auto mb-4">

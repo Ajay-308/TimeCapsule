@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  image     String
+  name      String?
+  createdAt DateTime @default(now())
+  
+  // Subscription fields
+  subscriptionPlan         String?
+  subscriptionStatus       String?
+  subscriptionBilling      String?
+  subscriptionStartDate    DateTime?
+  subscriptionEndDate      DateTime?
+  subscriptionCancelledAt  DateTime?
+
+  // Relations
+  capsules                 Capsule[]
+  files                    File[]
+  collaborations           CollaborativeCapsule[]
+  notifications            Notification[]
+  publicWalls              PublicWall[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+model Order {
+  id         String    @id @default(cuid())
+  userId     String
+  orderId    String    @unique
+  paymentId  String?
+  signature  String?
+  amount     Int
+  currency   String
+  planName   String
+  billing    String
+  status     String
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model Capsule {
+  id                String    @id @default(cuid())
+  userId            String
+  title             String
+  content           String?   @db.Text
+  fileId            String?
+  encryptionKey     String
+  unlockDate        DateTime
+  location          Json?
+  isUnlocked        Boolean   @default(false)
+  isOneTimeAccess   Boolean
+  isAccessed        Boolean   @default(false)
+  accessCount       Int       @default(0)
+  maxAccess         Int?
+  isPublic          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  unlockedAt        DateTime?
+  lastAccessedAt    DateTime?
+
+  // Relations
+  user                     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files                    File[]
+  collaborations           CollaborativeCapsule[]
+  notifications            Notification[]
+  publicWall               PublicWall?
+
+  @@index([userId])
+  @@index([unlockDate])
+  @@index([isUnlocked])
+  @@index([isPublic, isUnlocked])
+}
+
+model CollaborativeCapsule {
+  id                  String   @id @default(cuid())
+  mainCapsuleId       String
+  collaboratorUserId  String
+  contribution        String   @db.Text
+  addedAt             DateTime @default(now())
+  canView             Boolean  @default(true)
+
+  mainCapsule         Capsule  @relation(fields: [mainCapsuleId], references: [id], onDelete: Cascade)
+  collaborator        User     @relation(fields: [collaboratorUserId], references: [id], onDelete: Cascade)
+
+  @@index([mainCapsuleId])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  capsuleId  String
+  type       String
+  sent       Boolean  @default(false)
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  capsule    Capsule  @relation(fields: [capsuleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sent])
+}
+
+model PublicWall {
+  id           String   @id @default(cuid())
+  capsuleId    String   @unique
+  userId       String
+  content      String   @db.Text
+  unlockedAt   DateTime
+  likes        Int      @default(0)
+  isModerated  Boolean  @default(false)
+
+  capsule      Capsule  @relation(fields: [capsuleId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([unlockedAt])
+  @@index([isModerated])
+}
+
+model File {
+  id            String   @id @default(cuid())
+  capsuleId     String?
+  storageId     String
+  fileName      String
+  fileType      String
+  fileSize      Int
+  encryptionKey String
+  uploadedBy    String
+  createdAt     DateTime @default(now())
+
+  capsule       Capsule? @relation(fields: [capsuleId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([uploadedBy])
+  @@index([capsuleId])
+}

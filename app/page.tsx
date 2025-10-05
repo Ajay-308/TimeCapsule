@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { trpc } from "@/lib/trpc";
 import {
   Check,
-  ChevronRight,
-  Menu,
-  X,
-  Moon,
-  Sun,
   ArrowRight,
   Star,
   Clock,
@@ -33,20 +28,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { SignInButton, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
-import { api } from "@/convex/_generated/api";
-import { useMutation } from "convex/react";
 import Navbar from "@/components/navbar";
 
 export default function LandingPage() {
+  const { mutate: syncUser } = trpc.user.syncUser.useMutation();
+
   const router = useRouter();
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const syncUser = useMutation(api.user.syncUser);
   useEffect(() => {
     if (isLoaded && userId) {
       router.push("/dashboard");
@@ -84,10 +78,6 @@ export default function LandingPage() {
 
     syncUserData();
   }, [isLoaded, userId, user, syncUser]);
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -144,7 +134,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
+    <div className="flex min-h-[100dvh] flex-col ">
       <Navbar />
       <main className="flex-1">
         {/* Hero Section */}
@@ -389,8 +379,8 @@ export default function LandingPage() {
                 Heartwarming Time Capsule Stories
               </h2>
               <p className="max-w-[800px] text-muted-foreground md:text-lg">
-                Real stories from people who've used TimeCapsule to connect with
-                their future selves and loved ones.
+                Real stories from people who&#39;ve used TimeCapsule to connect
+                with their future selves and loved ones.
               </p>
             </motion.div>
 
@@ -576,7 +566,11 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: i * 0.1 }}
                       >
                         <Card
-                          className={`relative overflow-hidden h-full ${plan.popular ? "border-primary shadow-lg" : "border-border/40 shadow-md"} bg-gradient-to-b from-background to-muted/10 backdrop-blur`}
+                          className={`relative overflow-hidden h-full ${
+                            plan.popular
+                              ? "border-primary shadow-lg"
+                              : "border-border/40 shadow-md"
+                          } bg-gradient-to-b from-background to-muted/10 backdrop-blur`}
                         >
                           {plan.popular && (
                             <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
@@ -606,14 +600,16 @@ export default function LandingPage() {
                                 </li>
                               ))}
                             </ul>
-                            <SignInButton>
-                              <Button
-                                className={`w-full mt-auto rounded-full ${plan.popular ? "bg-primary hover:bg-primary/90" : "bg-muted hover:bg-muted/80"}`}
-                                variant={plan.popular ? "default" : "outline"}
-                              >
-                                {plan.cta}
-                              </Button>
-                            </SignInButton>
+                            <Button
+                              className={`w-full mt-auto rounded-full ${
+                                plan.popular
+                                  ? "bg-primary hover:bg-primary/90"
+                                  : "bg-muted hover:bg-muted/80"
+                              }`}
+                              variant={plan.popular ? "default" : "outline"}
+                            >
+                              {plan.cta}
+                            </Button>
                           </CardContent>
                         </Card>
                       </motion.div>
@@ -674,7 +670,11 @@ export default function LandingPage() {
                         transition={{ duration: 0.5, delay: i * 0.1 }}
                       >
                         <Card
-                          className={`relative overflow-hidden h-full ${plan.popular ? "border-primary shadow-lg" : "border-border/40 shadow-md"} bg-gradient-to-b from-background to-muted/10 backdrop-blur`}
+                          className={`relative overflow-hidden h-full ${
+                            plan.popular
+                              ? "border-primary shadow-lg"
+                              : "border-border/40 shadow-md"
+                          } bg-gradient-to-b from-background to-muted/10 backdrop-blur`}
                         >
                           {plan.popular && (
                             <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
@@ -705,7 +705,11 @@ export default function LandingPage() {
                               ))}
                             </ul>
                             <Button
-                              className={`w-full mt-auto rounded-full ${plan.popular ? "bg-primary hover:bg-primary/90" : "bg-muted hover:bg-muted/80"}`}
+                              className={`w-full mt-auto rounded-full ${
+                                plan.popular
+                                  ? "bg-primary hover:bg-primary/90"
+                                  : "bg-muted hover:bg-muted/80"
+                              }`}
                               variant={plan.popular ? "default" : "outline"}
                             >
                               {plan.cta}
