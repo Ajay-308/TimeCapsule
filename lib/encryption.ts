@@ -1,5 +1,3 @@
-// lib/encryption.ts
-
 const ALGORITHM = { name: "AES-GCM", length: 256 };
 const IV_LENGTH = 12;
 const SALT_LENGTH = 32;
