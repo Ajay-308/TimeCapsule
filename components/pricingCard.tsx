@@ -19,6 +19,7 @@ export type PricingCardProps = {
   cta: string;
   highlight?: boolean;
   billing: BillingCycle;
+  onClick?: () => void | Promise<void>;
 };
 
 export function PricingCard({
@@ -29,13 +30,14 @@ export function PricingCard({
   cta,
   highlight,
   billing,
+  onClick,
 }: PricingCardProps) {
   const price =
     priceMonthly == null
       ? "Free"
       : billing === "monthly"
-        ? `$${priceMonthly}`
-        : `$${Math.round(priceMonthly * 0.8)}`;
+      ? `$${priceMonthly}`
+      : `$${Math.round(priceMonthly * 0.8)}`;
 
   const sub =
     priceMonthly == null ? "" : billing === "monthly" ? "/month" : "/month";
@@ -102,6 +104,7 @@ export function PricingCard({
               ? "bg-(--color-chart-3) text-(--color-foreground) hover:opacity-90"
               : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
           )}
+          onClick={onClick}
         >
           {cta}
         </Button>
