@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRazorpay } from "@/hooks/useRazorpay";
+
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Check,
+  ChevronRight,
+  Menu,
+  X,
+  Moon,
+  Sun,
   ArrowRight,
   Star,
   Clock,
@@ -28,7 +33,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { useMutation } from "convex/react";
@@ -38,7 +43,6 @@ export default function LandingPage() {
   const router = useRouter();
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
-  const { pay } = useRazorpay();
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -602,19 +606,14 @@ export default function LandingPage() {
                                 </li>
                               ))}
                             </ul>
-                            <Button
-                              onClick={() =>
-                                pay({
-                                  name: plan.name,
-                                  price: plan.price,
-                                  billing: "monthly",
-                                })
-                              }
-                              className={`w-full mt-auto rounded-full ${plan.popular ? "bg-primary hover:bg-primary/90" : "bg-muted hover:bg-muted/80"}`}
-                              variant={plan.popular ? "default" : "outline"}
-                            >
-                              {plan.cta}
-                            </Button>
+                            <SignInButton>
+                              <Button
+                                className={`w-full mt-auto rounded-full ${plan.popular ? "bg-primary hover:bg-primary/90" : "bg-muted hover:bg-muted/80"}`}
+                                variant={plan.popular ? "default" : "outline"}
+                              >
+                                {plan.cta}
+                              </Button>
+                            </SignInButton>
                           </CardContent>
                         </Card>
                       </motion.div>

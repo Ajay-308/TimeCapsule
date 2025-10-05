@@ -8,7 +8,11 @@ export async function POST(req: Request) {
     if (!amount || !currency || !plan) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
+
+    // Razorpay expects amount in paise
+    // 👉 Pass rupees from frontend (9) → here we convert to 900
     const finalAmount = amount * 100;
+
     const res = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
@@ -23,18 +27,20 @@ export async function POST(req: Request) {
         amount: finalAmount,
         currency,
         receipt: `receipt_${Date.now()}`,
-        notes: {
-          plan,
-        },
+        notes: { plan },
       }),
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error("Razorpay API Error:", errorText);
+      console.error("🔴 Razorpay API Error:", errorText);
+
       return NextResponse.json(
-        { error: "Failed to create Razorpay order" },
-        { status: 500 }
+        {
+          error: "Failed to create Razorpay order",
+          details: errorText, // return error details
+        },
+        { status: res.status }
       );
     }
 
@@ -46,7 +52,10 @@ export async function POST(req: Request) {
       plan,
     });
   } catch (err: any) {
-    console.error("Payment API error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error("⚠️ Payment API error:", err);
+    return NextResponse.json(
+      { error: "Server error", details: err.message },
+      { status: 500 }
+    );
   }
 }
