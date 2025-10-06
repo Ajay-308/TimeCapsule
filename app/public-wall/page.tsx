@@ -29,136 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Mock data for public capsules
-const mockPublicCapsules = [
-  {
-    id: "1",
-    title: "Letter to My Future Self - College Graduate",
-    excerpt:
-      "Four years ago, I wrote this letter before starting college. Today I'm reading it as a graduate...",
-    author: {
-      name: "Sarah Chen",
-      avatar: "/placeholder.svg?height=40&width=40",
-      location: "San Francisco, CA",
-    },
-    unlockedAt: "2024-05-15T15:00:00Z",
-    createdAt: "2020-08-15T10:30:00Z",
-    category: "Personal Growth",
-    stats: {
-      views: 1247,
-      likes: 89,
-      comments: 23,
-    },
-    featured: true,
-    tags: ["college", "dreams", "goals"],
-  },
-  {
-    id: "2",
-    title: "Time Capsule from the Pandemic",
-    excerpt:
-      "Writing this during lockdown in 2020. I wonder what the world will look like when this opens...",
-    author: {
-      name: "Michael Rodriguez",
-      avatar: "/placeholder.svg?height=40&width=40",
-      location: "New York, NY",
-    },
-    unlockedAt: "2024-03-20T12:00:00Z",
-    createdAt: "2020-03-20T12:00:00Z",
-    category: "Historical",
-    stats: {
-      views: 2156,
-      likes: 156,
-      comments: 67,
-    },
-    featured: true,
-    tags: ["pandemic", "history", "hope"],
-  },
-  {
-    id: "3",
-    title: "Wedding Day Wishes",
-    excerpt:
-      "To anyone reading this - love is the most beautiful thing in the world. Cherish every moment...",
-    author: {
-      name: "Emily Johnson",
-      avatar: "/placeholder.svg?height=40&width=40",
-      location: "Austin, TX",
-    },
-    unlockedAt: "2024-01-10T18:30:00Z",
-    createdAt: "2023-01-10T18:30:00Z",
-    category: "Love & Relationships",
-    stats: {
-      views: 892,
-      likes: 67,
-      comments: 34,
-    },
-    featured: false,
-    tags: ["wedding", "love", "marriage"],
-  },
-  {
-    id: "4",
-    title: "New Year Resolutions Check-in",
-    excerpt:
-      "Last year I promised myself I'd learn guitar, travel more, and be kinder. Here's how it went...",
-    author: {
-      name: "David Kim",
-      avatar: "/placeholder.svg?height=40&width=40",
-      location: "Seattle, WA",
-    },
-    unlockedAt: "2024-01-01T00:00:00Z",
-    createdAt: "2023-01-01T00:00:00Z",
-    category: "Goals & Resolutions",
-    stats: {
-      views: 634,
-      likes: 45,
-      comments: 18,
-    },
-    featured: false,
-    tags: ["resolutions", "goals", "reflection"],
-  },
-  {
-    id: "5",
-    title: "Grandma's Recipe Collection",
-    excerpt:
-      "Before she passed, my grandmother shared her secret recipes with me. I'm sharing them with the world...",
-    author: {
-      name: "Lisa Patel",
-      avatar: "/placeholder.svg?height=40&width=40",
-      location: "Chicago, IL",
-    },
-    unlockedAt: "2023-12-25T16:00:00Z",
-    createdAt: "2022-12-25T16:00:00Z",
-    category: "Family & Heritage",
-    stats: {
-      views: 1834,
-      likes: 234,
-      comments: 89,
-    },
-    featured: false,
-    tags: ["family", "recipes", "heritage"],
-  },
-  {
-    id: "6",
-    title: "Startup Journey - 5 Years Later",
-    excerpt:
-      "Five years ago I quit my job to start a company. Here's what I learned about entrepreneurship...",
-    author: {
-      name: "James Wilson",
-      avatar: "/placeholder.svg?height=40&width=40",
-      location: "Boston, MA",
-    },
-    unlockedAt: "2023-11-15T09:00:00Z",
-    createdAt: "2018-11-15T09:00:00Z",
-    category: "Career & Business",
-    stats: {
-      views: 3421,
-      likes: 287,
-      comments: 156,
-    },
-    featured: false,
-    tags: ["startup", "entrepreneurship", "business"],
-  },
-];
+import { trpc } from "@/lib/trpc";
 
 const categories = [
   "All Categories",
@@ -174,58 +45,45 @@ const categories = [
 export default function PublicWallPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [sortBy, setSortBy] = useState("recent");
+  const [sortBy, setSortBy] = useState<"recent" | "popular" | "views">(
+    "recent"
+  );
+  const { data, isLoading } = trpc.publicWall.getAllPublicCapsules.useQuery({
+    category: selectedCategory,
+    sortBy,
+  });
+  const capsules = (data?.capsules ?? []).filter(
+    (c): c is NonNullable<typeof c> => Boolean(c)
+  );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-  };
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "k";
-    }
-    return num.toString();
-  };
+  const formatNumber = (num: number) =>
+    num >= 1000 ? (num / 1000).toFixed(1) + "k" : num.toString();
 
-  const filteredCapsules = mockPublicCapsules
-    .filter((capsule) => {
-      const matchesSearch =
-        capsule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        capsule.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        capsule.tags.some((tag) =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+  // ✅ Apply search filter locally
+  const filteredCapsules = capsules.filter((capsule) => {
+    const matchesSearch =
+      capsule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      capsule.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      capsule.tags?.some((tag: string) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
-      const matchesCategory =
-        selectedCategory === "All Categories" ||
-        capsule.category === selectedCategory;
+    const matchesCategory =
+      selectedCategory === "All Categories" ||
+      capsule.category === selectedCategory;
 
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "popular":
-          return b.stats.likes - a.stats.likes;
-        case "views":
-          return b.stats.views - a.stats.views;
-        case "recent":
-        default:
-          return (
-            new Date(b.unlockedAt).getTime() - new Date(a.unlockedAt).getTime()
-          );
-      }
-    });
+    return matchesSearch && matchesCategory;
+  });
 
-  const featuredCapsules = filteredCapsules.filter(
-    (capsule) => capsule.featured
-  );
-  const regularCapsules = filteredCapsules.filter(
-    (capsule) => !capsule.featured
-  );
+  const featuredCapsules = filteredCapsules.filter((c) => c.featured);
+  const regularCapsules = filteredCapsules.filter((c) => !c.featured);
 
   return (
     <div className="min-h-screen bg-background">
@@ -245,11 +103,9 @@ export default function PublicWallPage() {
               <span>TimeCapsule</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/capsule/create">
-              <Button className="rounded-full">Create Capsule</Button>
-            </Link>
-          </div>
+          <Link href="/capsule/create">
+            <Button className="rounded-full">Create Capsule</Button>
+          </Link>
         </div>
       </header>
 
@@ -275,7 +131,7 @@ export default function PublicWallPage() {
             </p>
           </div>
 
-          {/* Search and Filters */}
+          {/* Search + Filters */}
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
@@ -295,14 +151,20 @@ export default function PublicWallPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
+
+              <Select
+                value={sortBy}
+                onValueChange={(v) =>
+                  setSortBy(v as "recent" | "popular" | "views")
+                }
+              >
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -315,8 +177,15 @@ export default function PublicWallPage() {
             </div>
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="text-center py-12 text-muted-foreground">
+              Loading public capsules...
+            </div>
+          )}
+
           {/* Featured Capsules */}
-          {featuredCapsules.length > 0 && (
+          {!isLoading && featuredCapsules.length > 0 && (
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <Star className="size-5 text-yellow-500" />
@@ -332,30 +201,27 @@ export default function PublicWallPage() {
                   >
                     <Card className="h-full overflow-hidden hover:shadow-lg transition-all border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                       <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <Badge className="bg-yellow-500 text-yellow-50 mb-2">
-                            <Star className="size-3 mr-1" />
-                            Featured
-                          </Badge>
-                        </div>
+                        <Badge className="bg-yellow-500 text-yellow-50 mb-2 flex items-center gap-1">
+                          <Star className="size-3" />
+                          Featured
+                        </Badge>
                         <CardTitle className="text-xl leading-tight">
                           {capsule.title}
                         </CardTitle>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="outline">{capsule.category}</Badge>
-                          <div className="flex gap-1">
-                            {capsule.tags.slice(0, 2).map((tag) => (
-                              <Badge
-                                key={tag}
-                                variant="secondary"
-                                className="text-xs"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
+                          {capsule.tags?.slice(0, 2).map((tag: string) => (
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
                         </div>
                       </CardHeader>
+
                       <CardContent className="space-y-4">
                         <p className="text-muted-foreground line-clamp-3">
                           {capsule.excerpt}
@@ -364,11 +230,10 @@ export default function PublicWallPage() {
                         <div className="flex items-center gap-3">
                           <Avatar className="size-8">
                             <AvatarImage
-                              src={capsule.author.avatar || "/placeholder.svg"}
-                              alt={capsule.author.name}
+                              src={capsule.author.image || "/placeholder.svg"}
                             />
                             <AvatarFallback>
-                              {capsule.author.name.charAt(0)}
+                              {capsule.author?.name?.[0]}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
@@ -400,7 +265,7 @@ export default function PublicWallPage() {
                             </span>
                             <span className="flex items-center gap-1">
                               <MessageCircle className="size-3" />
-                              {capsule.stats.comments}
+                              {capsule.stats.comments ?? 0}
                             </span>
                           </div>
                         </div>
@@ -419,8 +284,8 @@ export default function PublicWallPage() {
           )}
 
           {/* Regular Capsules */}
-          <div className="space-y-6">
-            {featuredCapsules.length > 0 && (
+          {!isLoading && filteredCapsules.length > 0 && (
+            <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <TrendingUp className="size-5" />
                 <h2 className="text-xl font-bold">All Stories</h2>
@@ -428,28 +293,6 @@ export default function PublicWallPage() {
                   ({regularCapsules.length} capsules)
                 </span>
               </div>
-            )}
-
-            {filteredCapsules.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Globe className="size-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-medium mb-2">
-                    No capsules found
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    {searchQuery || selectedCategory !== "All Categories"
-                      ? "Try adjusting your search or filter criteria"
-                      : "Be the first to share your story with the world"}
-                  </p>
-                  <Link href="/capsule/create">
-                    <Button className="rounded-full">
-                      Create Public Capsule
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {regularCapsules.map((capsule, index) => (
                   <motion.div
@@ -460,14 +303,12 @@ export default function PublicWallPage() {
                   >
                     <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
                       <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between mb-2">
-                          <Badge variant="outline">{capsule.category}</Badge>
-                        </div>
+                        <Badge variant="outline">{capsule.category}</Badge>
                         <CardTitle className="text-lg leading-tight line-clamp-2">
                           {capsule.title}
                         </CardTitle>
-                        <div className="flex gap-1">
-                          {capsule.tags.slice(0, 3).map((tag) => (
+                        <div className="flex gap-1 flex-wrap">
+                          {capsule.tags?.slice(0, 3).map((tag: string) => (
                             <Badge
                               key={tag}
                               variant="secondary"
@@ -482,15 +323,13 @@ export default function PublicWallPage() {
                         <p className="text-sm text-muted-foreground line-clamp-3">
                           {capsule.excerpt}
                         </p>
-
                         <div className="flex items-center gap-3">
                           <Avatar className="size-8">
                             <AvatarImage
-                              src={capsule.author.avatar || "/placeholder.svg"}
-                              alt={capsule.author.name}
+                              src={capsule.author.image || "/placeholder.svg"}
                             />
                             <AvatarFallback>
-                              {capsule.author.name.charAt(0)}
+                              {capsule.author?.name?.[0]}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
@@ -510,14 +349,10 @@ export default function PublicWallPage() {
                             <span>{formatDate(capsule.unlockedAt)}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1">
-                              <Eye className="size-3" />
-                              {formatNumber(capsule.stats.views)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Heart className="size-3" />
-                              {formatNumber(capsule.stats.likes)}
-                            </span>
+                            <Eye className="size-3" />{" "}
+                            {formatNumber(capsule.stats.views)}
+                            <Heart className="size-3" />{" "}
+                            {formatNumber(capsule.stats.likes)}
                           </div>
                         </div>
 
@@ -534,29 +369,28 @@ export default function PublicWallPage() {
                   </motion.div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Call to Action */}
-          <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20">
-            <CardContent className="p-8 text-center">
-              <div className="space-y-4">
-                <div className="flex items-center justify-center gap-2">
-                  <Sparkles className="size-6 text-primary" />
-                  <h3 className="text-xl font-bold">Share Your Story</h3>
-                </div>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Create a public time capsule and inspire others with your
-                  journey, wisdom, or memories.
+          {/* Empty State */}
+          {!isLoading && filteredCapsules.length === 0 && (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Globe className="size-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">No capsules found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery || selectedCategory !== "All Categories"
+                    ? "Try adjusting your search or filter criteria"
+                    : "Be the first to share your story with the world"}
                 </p>
                 <Link href="/capsule/create">
-                  <Button size="lg" className="rounded-full">
+                  <Button className="rounded-full">
                     Create Public Capsule
                   </Button>
                 </Link>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </motion.div>
       </main>
     </div>
