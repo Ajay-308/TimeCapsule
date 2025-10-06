@@ -35,6 +35,17 @@ export const capsuleRouter = createTRPCRouter({
           message: "User not found",
         });
       }
+      const checkPremium = user.subscriptionStatus === "active";
+      const userCapsuleCount = await ctx.prisma.capsule.count({
+        where: { userId: user.id },
+      });
+      if (!checkPremium && userCapsuleCount >= 2) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Free tier limit reached. Please upgrade to premium to create more capsules.",
+        });
+      }
 
       const capsule = await ctx.prisma.capsule.create({
         data: {

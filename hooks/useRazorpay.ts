@@ -67,9 +67,13 @@ export function useRazorpay() {
           theme: {
             color: "#3b82f6",
           },
-          handler: async (response: any) => {
+          // Type-safe response
+          handler: async (response: {
+            razorpay_order_id: string;
+            razorpay_payment_id: string;
+            razorpay_signature: string;
+          }) => {
             try {
-              // ✅ Verify payment using tRPC backend
               const verification = await verifyPayment.mutateAsync({
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
@@ -79,7 +83,7 @@ export function useRazorpay() {
               });
 
               if (verification.success) {
-                toast.success("Payment successful! Welcome to " + name);
+                toast.success(`Payment successful! Welcome to ${name}`);
                 window.location.href = "/dashboard";
               } else {
                 toast.error("Payment verification failed");

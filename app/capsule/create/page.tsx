@@ -5,6 +5,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+
 import {
   ArrowLeft,
   Clock,
@@ -26,27 +28,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-
-// Simple toast implementation
-const useToast = () => ({
-  toast: ({
-    title,
-    description,
-    variant,
-  }: {
-    title: string;
-    description: string;
-    variant?: string;
-  }) => {
-    console.log(
-      `${variant === "destructive" ? "❌" : "✅"} ${title}: ${description}`
-    );
-  },
-});
+import { error } from "console";
 
 export default function CreateCapsulePage() {
   const router = useRouter();
-  const { toast } = useToast();
   const createCapsuleMutation = trpc.capsule.create.useMutation();
   const [capsuleType, setCapsuleType] = useState("personal");
   const [unlockDate, setUnlockDate] = useState("");
@@ -99,82 +84,63 @@ export default function CreateCapsulePage() {
               6
             )}, ${position.coords.longitude.toFixed(6)}`
           );
-          toast({
-            title: "Location Set",
+          toast.success("Location Set", {
             description: "Current location has been set for geo-locking.",
           });
         },
         (error) => {
-          toast({
-            title: "Location Error",
+          toast.error("Location Error", {
             description:
               "Failed to get current location. Please enter manually.",
-            variant: "destructive",
           });
         }
       );
     } else {
-      toast({
-        title: "Not Supported",
-        description: "Geolocation is not supported by this browser.",
-        variant: "destructive",
-      });
+      toast("Geolocation is not supported by this browser.");
     }
   };
 
   const validateForm = () => {
     if (!title.trim()) {
-      toast({
-        title: "Title Required",
+      toast.error("Title Required", {
         description: "Please enter a title for your time capsule.",
-        variant: "destructive",
       });
       return false;
     }
 
     if (!unlockDate) {
-      toast({
-        title: "Unlock Date Required",
+      toast.error("Unlock Date Required", {
         description: "Please select when you want your capsule to unlock.",
-        variant: "destructive",
       });
       return false;
     }
 
     const unlockDateTime = new Date(`${unlockDate}T${unlockTime || "00:00"}`);
     if (unlockDateTime <= new Date()) {
-      toast({
-        title: "Invalid Date",
+      toast.error("Invalid Date", {
         description: "Unlock date must be in the future.",
-        variant: "destructive",
       });
       return false;
     }
 
     if (!message.trim()) {
-      toast({
-        title: "Message Required",
+      toast.error("Message Required", {
         description: "Please write a message for your time capsule.",
-        variant: "destructive",
       });
       return false;
     }
 
     if (capsuleType === "collaborative" && collaborators.length === 0) {
-      toast({
-        title: "Collaborators Required",
+      toast.error("Collaborators Required", {
         description:
           "Please add at least one collaborator for a collaborative capsule.",
-        variant: "destructive",
       });
       return false;
     }
 
     if (geoLock && (!latitude || !longitude)) {
-      toast({
-        title: "Location Required",
+      toast.error("Location Required", {
         description: "Please set a location for geo-locked capsules.",
-        variant: "destructive",
       });
       return false;
     }
@@ -194,7 +160,7 @@ export default function CreateCapsulePage() {
         body: formData,
       });
       if (!res.ok) {
-        console.error("Upload failed with status:", res.status);
+        throw new Error("Upload failed with status:");
       }
 
       if (!res.ok) throw new Error("Upload failed");
@@ -203,10 +169,9 @@ export default function CreateCapsulePage() {
       return storageId;
     } catch (error) {
       console.error("File upload error:", error);
-      toast({
-        title: "Upload Failed",
+
+      toast.error("Upload Failed", {
         description: `Failed to upload ${file.name}`,
-        variant: "destructive",
       });
       return null;
     }
@@ -262,8 +227,7 @@ export default function CreateCapsulePage() {
         isPublic: capsuleType === "public" ? true : isPublic,
       });
 
-      toast({
-        title: "Time Capsule Created!",
+      toast.success("Time Capsule Created!", {
         description: `Your capsule "${title}" will unlock on ${new Date(
           unlockTimestamp
         ).toLocaleDateString()}.`,
@@ -273,11 +237,10 @@ export default function CreateCapsulePage() {
       router.push(`/capsule/${result.capsuleId}`);
     } catch (error) {
       console.error("Error creating capsule:", error);
-      toast({
-        title: "Creation Failed",
+      toast.error("Creation Failed", {
         description:
+          (error as Error)?.message ||
           "There was an error creating your time capsule. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setIsCreating(false);
@@ -286,10 +249,8 @@ export default function CreateCapsulePage() {
 
   const saveDraft = async () => {
     if (!title.trim()) {
-      toast({
-        title: "Title Required",
+      toast.error("Title Required", {
         description: "Please enter a title to save as draft.",
-        variant: "destructive",
       });
       return;
     }
@@ -320,17 +281,13 @@ export default function CreateCapsulePage() {
         `capsule_draft_${Date.now()}`,
         JSON.stringify(draftData)
       );
-
-      toast({
-        title: "Draft Saved",
+      toast.success("Draft Saved", {
         description: "Your time capsule has been saved as a draft locally.",
       });
     } catch (error) {
       console.error("Error saving draft:", error);
-      toast({
-        title: "Save Failed",
+      toast.error("Save Failed", {
         description: "There was an error saving your draft. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
