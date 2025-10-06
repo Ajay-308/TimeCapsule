@@ -95,7 +95,7 @@ export function PricingSection() {
           cta="Start Free Trial"
           billing={billing}
           highlight
-          onClick={() => pay({ name: "Family", price: "$9", billing })}
+          onClick={() => pay({ name: "Family", price: "$1", billing })}
         />
 
         <PricingCard

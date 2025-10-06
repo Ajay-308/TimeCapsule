@@ -73,7 +73,7 @@ export const paymentRouter = createTRPCRouter({
       try {
         const body = input.orderId + "|" + input.paymentId;
         const expectedSignature = crypto
-          .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+          .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY!)
           .update(body)
           .digest("hex");
 

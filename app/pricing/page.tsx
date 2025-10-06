@@ -1,9 +1,11 @@
+import Navbar from "@/components/navbar";
 import { PricingSection } from "@/components/pricingSection";
 
 export default function PricingPage() {
   return (
     <main className="relative">
       {/* subtle grid background */}
+      <Navbar />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"

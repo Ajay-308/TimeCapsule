@@ -20,7 +20,6 @@ export default function Navbar() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -36,41 +35,54 @@ export default function Navbar() {
       }`}
     >
       <div className="container flex h-16 items-center justify-between">
+        {/* Logo */}
         <div className="flex items-center gap-2 font-bold">
           <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground">
             <Clock className="size-4" />
           </div>
           <span>TimeCapsule</span>
         </div>
-        {!isSignedIn && (
-          <nav className="hidden md:flex gap-8">
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex gap-8">
+          {!isSignedIn ? (
+            <>
+              <Link
+                href="#features"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Features
+              </Link>
+              <Link
+                href="#testimonials"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Stories
+              </Link>
+              <Link
+                href="#pricing"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="#faq"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                FAQ
+              </Link>
+            </>
+          ) : (
             <Link
-              href="#features"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Features
-            </Link>
-            <Link
-              href="#testimonials"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              Stories
-            </Link>
-            <Link
-              href="#pricing"
+              href="/pricing"
               className="text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               Pricing
             </Link>
-            <Link
-              href="#faq"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              FAQ
-            </Link>
-          </nav>
-        )}
+          )}
+        </nav>
 
+        {/* Desktop Right Buttons */}
         <div className="hidden md:flex gap-4 items-center">
           <Button
             variant="ghost"
@@ -101,6 +113,8 @@ export default function Navbar() {
             </div>
           )}
         </div>
+
+        {/* Mobile Buttons */}
         <div className="flex items-center gap-4 md:hidden">
           <Button
             variant="ghost"
@@ -128,6 +142,8 @@ export default function Navbar() {
           </Button>
         </div>
       </div>
+
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -135,38 +151,48 @@ export default function Navbar() {
           exit={{ opacity: 0, y: -20 }}
           className="md:hidden absolute top-16 inset-x-0 bg-background/95 backdrop-blur-lg border-b"
         >
-          {!isSignedIn && (
-            <>
+          <div className="flex flex-col gap-2 py-2">
+            {!isSignedIn ? (
+              <>
+                <Link
+                  href="#features"
+                  className="py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Features
+                </Link>
+                <Link
+                  href="#testimonials"
+                  className="py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Stories
+                </Link>
+                <Link
+                  href="#pricing"
+                  className="py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="#faq"
+                  className="py-2 text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  FAQ
+                </Link>
+              </>
+            ) : (
               <Link
-                href="#features"
-                className="py-2 text-sm font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Features
-              </Link>
-              <Link
-                href="#testimonials"
-                className="py-2 text-sm font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Stories
-              </Link>
-              <Link
-                href="#pricing"
+                href="/pricing"
                 className="py-2 text-sm font-medium"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Pricing
               </Link>
-              <Link
-                href="#faq"
-                className="py-2 text-sm font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                FAQ
-              </Link>
-            </>
-          )}
+            )}
+          </div>
           <div className="container py-4 flex flex-col gap-4">
             <div className="flex flex-col gap-2 pt-2 border-t cursor-pointer hover:cursor-pointer">
               {isSignedIn ? (
