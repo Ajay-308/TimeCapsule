@@ -28,7 +28,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import Navbar from "@/components/navbar";
 
@@ -600,16 +600,32 @@ export default function LandingPage() {
                                 </li>
                               ))}
                             </ul>
-                            <Button
-                              className={`w-full mt-auto rounded-full ${
-                                plan.popular
-                                  ? "bg-primary hover:bg-primary/90"
-                                  : "bg-muted hover:bg-muted/80"
-                              }`}
-                              variant={plan.popular ? "default" : "outline"}
-                            >
-                              {plan.cta}
-                            </Button>
+
+                            {plan.cta === "Start Free Trial" ? (
+                              <SignInButton mode="modal">
+                                <Button
+                                  className={`w-full mt-auto rounded-full ${
+                                    plan.popular
+                                      ? "bg-primary hover:bg-primary/90"
+                                      : "bg-muted hover:bg-muted/80"
+                                  }`}
+                                  variant={plan.popular ? "default" : "outline"}
+                                >
+                                  Sign In to Start Free Trial
+                                </Button>
+                              </SignInButton>
+                            ) : (
+                              <Button
+                                className={`w-full mt-auto rounded-full ${
+                                  plan.popular
+                                    ? "bg-primary hover:bg-primary/90"
+                                    : "bg-muted hover:bg-muted/80"
+                                }`}
+                                variant={plan.popular ? "default" : "outline"}
+                              >
+                                {plan.cta}
+                              </Button>
+                            )}
                           </CardContent>
                         </Card>
                       </motion.div>
@@ -704,16 +720,32 @@ export default function LandingPage() {
                                 </li>
                               ))}
                             </ul>
-                            <Button
-                              className={`w-full mt-auto rounded-full ${
-                                plan.popular
-                                  ? "bg-primary hover:bg-primary/90"
-                                  : "bg-muted hover:bg-muted/80"
-                              }`}
-                              variant={plan.popular ? "default" : "outline"}
-                            >
-                              {plan.cta}
-                            </Button>
+
+                            {plan.cta === "Start Free Trial" ? (
+                              <SignInButton mode="modal">
+                                <Button
+                                  className={`w-full mt-auto rounded-full ${
+                                    plan.popular
+                                      ? "bg-primary hover:bg-primary/90"
+                                      : "bg-muted hover:bg-muted/80"
+                                  }`}
+                                  variant={plan.popular ? "default" : "outline"}
+                                >
+                                  Sign In to Start Free Trial
+                                </Button>
+                              </SignInButton>
+                            ) : (
+                              <Button
+                                className={`w-full mt-auto rounded-full ${
+                                  plan.popular
+                                    ? "bg-primary hover:bg-primary/90"
+                                    : "bg-muted hover:bg-muted/80"
+                                }`}
+                                variant={plan.popular ? "default" : "outline"}
+                              >
+                                {plan.cta}
+                              </Button>
+                            )}
                           </CardContent>
                         </Card>
                       </motion.div>
