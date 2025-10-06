@@ -16,8 +16,10 @@ export const paymentRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const razorpay = new Razorpay({
         key_id: process.env.RAZORPAY_KEY_ID!,
-        key_secret: process.env.RAZORPAY_KEY_SECRET!,
+        key_secret: process.env.RAZORPAY_SECRET_KEY!,
       });
+      // console.log("Razorpay instance created", process.env.RAZORPAY_KEY_ID);
+      // console.log("razorpay secret", process.env.RAZORPAY_SECRET_KEY);
 
       try {
         const order = await razorpay.orders.create({
