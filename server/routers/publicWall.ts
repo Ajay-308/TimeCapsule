@@ -18,6 +18,7 @@ export const publicWallRouter = createTRPCRouter({
 
         const where: any = {
           isPublic: true,
+          isUnlocked: true, // Only unlocked capsules
         };
 
         if (search) {
@@ -27,7 +28,8 @@ export const publicWallRouter = createTRPCRouter({
           ];
         }
 
-        let orderBy: any = { unlockedAt: "desc" };
+        // Sorting
+        let orderBy: any = { unlockDate: "desc" };
         if (sortBy === "popular") orderBy = { publicWall: { likes: "desc" } };
         else if (sortBy === "views") orderBy = { accessCount: "desc" };
 
@@ -37,41 +39,27 @@ export const publicWallRouter = createTRPCRouter({
             user: {
               select: { id: true, name: true, image: true, clerkId: true },
             },
-            publicWall: {
-              select: { content: true, likes: true, unlockedAt: true },
-            },
+            publicWall: true,
             files: { select: { id: true, fileName: true, fileType: true } },
           },
           orderBy,
           take: 100,
         });
-        console.log("🧩 Found capsules:", capsules.length);
-        console.log(
-          capsules.map((c) => ({
-            id: c.id,
-            isPublic: c.isPublic,
-            hasPublicWall: !!c.publicWall,
-            isUnlocked: c.isUnlocked,
-          }))
-        );
 
-        // ✅ Always return consistent data
+        // Transform capsules
         const transformedCapsules = capsules
-          .filter((capsule) => capsule.publicWall)
           .map((capsule) => {
             const location = capsule.location as any;
             const content =
-              capsule.publicWall!.content || capsule.content || "";
+              capsule.publicWall?.content || capsule.content || "";
             const detectedCategory = determineCategory(content, capsule.title);
 
-            // Apply category filter
             if (
               category &&
               category !== "All Categories" &&
               detectedCategory !== category
-            ) {
+            )
               return null;
-            }
 
             return {
               id: capsule.id,
@@ -87,16 +75,16 @@ export const publicWallRouter = createTRPCRouter({
                     ? `${location.city}, ${location.country}`
                     : null,
               },
-              unlockedAt: capsule.publicWall!.unlockedAt?.toISOString?.() ?? "",
-              createdAt: capsule.createdAt?.toISOString?.() ?? "",
-              unlockDate: capsule.unlockDate?.toISOString?.() ?? "",
+              unlockedAt: capsule.publicWall?.unlockedAt?.toISOString() ?? "",
+              createdAt: capsule.createdAt?.toISOString() ?? "",
+              unlockDate: capsule.unlockDate?.toISOString() ?? "",
               category: detectedCategory,
               stats: {
                 views: capsule.accessCount ?? 0,
-                likes: capsule.publicWall!.likes ?? 0,
+                likes: capsule.publicWall?.likes ?? 0,
                 comments: 0,
               },
-              featured: (capsule.publicWall!.likes ?? 0) > 50,
+              featured: (capsule.publicWall?.likes ?? 0) > 50,
               tags: extractTags(content, capsule.title),
               location:
                 location?.city && location?.country
@@ -106,13 +94,9 @@ export const publicWallRouter = createTRPCRouter({
               fileCount: capsule.files.length,
             };
           })
-          // 👇 fix type issue by narrowing to proper type
           .filter((c): c is NonNullable<typeof c> => c !== null);
 
-        return {
-          success: true as const,
-          capsules: transformedCapsules,
-        };
+        return { success: true as const, capsules: transformedCapsules };
       } catch (error) {
         console.error("Error fetching public capsules:", error);
         throw new TRPCError({
@@ -143,15 +127,24 @@ export const publicWallRouter = createTRPCRouter({
           },
         });
 
-        if (
-          !capsule ||
-          !capsule.isPublic ||
-          !capsule.isUnlocked ||
-          !capsule.publicWall
-        ) {
+        if (!capsule || !capsule.isPublic || !capsule.isUnlocked) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Public capsule not found",
+          });
+        }
+
+        // Create publicWall if missing
+        if (!capsule.publicWall) {
+          capsule.publicWall = await ctx.prisma.publicWall.create({
+            data: {
+              capsuleId: capsule.id,
+              userId: capsule.userId,
+              content: capsule.content || "No content available",
+              likes: 0,
+              isModerated: true,
+              unlockedAt: capsule.unlockDate || new Date(),
+            },
           });
         }
 
@@ -202,19 +195,12 @@ export const publicWallRouter = createTRPCRouter({
     .input(z.object({ capsuleId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { capsuleId } = input;
-
         const capsule = await ctx.prisma.capsule.findUnique({
-          where: { id: capsuleId },
+          where: { id: input.capsuleId },
           include: { publicWall: true },
         });
 
-        if (
-          !capsule ||
-          !capsule.isPublic ||
-          !capsule.isUnlocked ||
-          !capsule.publicWall
-        ) {
+        if (!capsule || !capsule.isPublic || !capsule.isUnlocked) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Public capsule not found",
@@ -222,7 +208,7 @@ export const publicWallRouter = createTRPCRouter({
         }
 
         const updatedPublicWall = await ctx.prisma.publicWall.update({
-          where: { capsuleId },
+          where: { capsuleId: input.capsuleId },
           data: { likes: { increment: 1 } },
         });
 
@@ -248,10 +234,7 @@ export const publicWallRouter = createTRPCRouter({
         where: {
           isPublic: true,
           isUnlocked: true,
-          publicWall: {
-            isModerated: true,
-            likes: { gte: 50 },
-          },
+          publicWall: { isModerated: true, likes: { gte: 50 } },
         },
         include: {
           user: { select: { name: true, image: true } },
@@ -284,7 +267,6 @@ export const publicWallRouter = createTRPCRouter({
 // 🧠 Category detector
 function determineCategory(content: string, title: string): string {
   const text = (content + " " + title).toLowerCase();
-
   if (text.match(/wedding|love|relationship/)) return "Love & Relationships";
   if (text.match(/business|startup|career/)) return "Career & Business";
   if (text.match(/family|grandma|heritage/)) return "Family & Heritage";
@@ -319,6 +301,5 @@ function extractTags(content: string, title: string): string[] {
     "recipes",
     "adventure",
   ];
-
   return commonTags.filter((tag) => text.includes(tag)).slice(0, 5);
 }
