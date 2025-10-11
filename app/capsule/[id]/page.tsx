@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, use, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import NextImage from "next/image";
-import { CapsuleEncryption } from "@/lib/encryption";
 import {
   ArrowLeft,
   Clock,
@@ -39,7 +39,7 @@ interface CapsulePageProps {
 }
 
 export default function CapsuleViewPage({ params }: CapsulePageProps) {
-  const { id } = use(params);
+  const { id } = useParams();
   const audioFileRef = useRef<HTMLAudioElement>(null);
   const [isPlayingFile, setIsPlayingFile] = useState(false);
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
