@@ -1,5 +1,6 @@
 name: Unlock Capsules
 
+# Run every minute and allow manual trigger
 on:
   schedule:
     - cron: "*/1 * * * *" # every minute
@@ -11,19 +12,26 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
+      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 22
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      # Setup pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # or your pnpm version
 
+      # Install dependencies
       - name: Install dependencies
         run: pnpm install
 
+      # Run the unlock & backfill script
       - name: Run backfill script
-        run: pnpm exec ts-node scripts/backfillPublicWall.ts
+        run: pnpm exec ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/backfillPublicWall.ts
