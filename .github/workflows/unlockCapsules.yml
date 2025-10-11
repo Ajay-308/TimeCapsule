@@ -19,8 +19,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Run backfill script
-        run: npx ts-node scripts/backfillPublicWall.ts
+        run: pnpm exec ts-node scripts/backfillPublicWall.ts

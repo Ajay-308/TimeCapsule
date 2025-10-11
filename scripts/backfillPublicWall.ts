@@ -1,4 +1,4 @@
-import { prisma } from "@/server/db";
+import { prisma } from "../server/db";
 
 async function unlockAndBackfill() {
   const now = new Date();
