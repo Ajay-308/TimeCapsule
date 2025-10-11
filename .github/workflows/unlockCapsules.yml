@@ -2,23 +2,25 @@ name: Unlock Capsules
 
 on:
   schedule:
-    - cron: "* * * * *" # every minute
+    - cron: "*/1 * * * *" # every minute
   workflow_dispatch:
 
 jobs:
-  unlock-capsules:
+  unlock:
     runs-on: ubuntu-latest
-
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
-          cache: "pnpm"
+          node-version: 22
 
-      - run: pnpm install
+      - name: Install dependencies
+        run: npm install
 
-      - run: pnpm ts-node -r tsconfig-paths/register scripts/backfillPublic.ts
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Run backfill script
+        run: npx ts-node scripts/backfillPublicWall.ts
