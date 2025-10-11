@@ -67,54 +67,6 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
   const unlockCapsuleMutation = trpc.capsule.unlockCapsule.useMutation();
 
   useEffect(() => {
-    const decryptUrlFile = async () => {
-      if (capsuleFiles && capsuleFiles.length > 0) {
-        const file = capsuleFiles[0]; // Get first file
-        if (file.storageId && file.encryptionKey) {
-          try {
-            // ✅ storageId = Cloudinary URL
-            const response = await fetch(file.storageId);
-            const encryptedHex = await response.text();
-
-            // ✅ Decrypt file
-            const decrypted = await CapsuleEncryption.decryptFile(
-              encryptedHex,
-              file.encryptionKey
-            );
-
-            // ✅ Convert to base64
-            let base64Content: string;
-            if (decrypted instanceof ArrayBuffer) {
-              const uint8Array = new Uint8Array(decrypted);
-              base64Content = btoa(String.fromCharCode(...uint8Array));
-            } else {
-              base64Content = decrypted;
-            }
-
-            // ✅ Convert to Blob
-            const byteCharacters = atob(base64Content);
-            const byteNumbers = Array.from(byteCharacters).map((ch) =>
-              ch.charCodeAt(0)
-            );
-            const byteArray = new Uint8Array(byteNumbers);
-
-            const blob = new Blob([byteArray], { type: file.fileType });
-            const url = URL.createObjectURL(blob);
-
-            setDecryptedUrl(url);
-          } catch (error) {
-            console.error("Failed to decrypt file:", error);
-          }
-        }
-      }
-    };
-
-    decryptUrlFile();
-  }, [capsuleFiles]);
-
-  console.log("decryptedUrl:", decryptedUrl);
-
-  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -368,8 +320,8 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                   {isUnlocked
                     ? "Ready to view"
                     : capsuleAccess?.locked
-                    ? capsuleAccess.reason
-                    : "Waiting for unlock conditions"}
+                      ? capsuleAccess.reason
+                      : "Waiting for unlock conditions"}
                 </p>
               </CardContent>
             </Card>
@@ -436,58 +388,153 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
               </Card>
 
               {/* Attachments section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-blue-500" />
-                  Attachments
-                </h2>
-                <div className="mt-4 space-y-4">
-                  {/* Capsule file */}
-                  {decryptedUrl && (
-                    <NextImage
-                      src={decryptedUrl}
-                      alt="Capsule File"
-                      width={240}
-                      height={240}
-                      className="w-60 h-60 object-cover rounded-lg shadow-md"
-                    />
-                  )}
+              {capsuleFiles && capsuleFiles.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-blue-500" />
+                    Attachments
+                  </h2>
+                  <div className="mt-4 space-y-4">
+                    {capsuleFiles?.map((file: any) => {
+                      const type = file.fileType;
 
-                  {/* Other files */}
-                  {capsuleFiles?.map((file: any) => {
-                    if (file.fileType.startsWith("audio")) {
-                      const toggleAudio = () => {
-                        if (!audioFileRef.current) return;
+                      // 🖼️ Image Preview
+                      if (type.startsWith("image/")) {
+                        return (
+                          <div key={file.id} className="space-y-2">
+                            <NextImage
+                              src={file.fileUrl}
+                              alt={file.fileName}
+                              width={240}
+                              height={240}
+                              className="w-60 h-60 object-cover rounded-lg shadow-md"
+                            />
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {file.fileName}
+                            </p>
+                          </div>
+                        );
+                      }
 
-                        if (isPlayingFile) {
-                          audioFileRef.current.pause();
-                        } else {
-                          audioFileRef.current.play();
-                        }
-                        setIsPlayingFile(!isPlayingFile);
-                      };
+                      // 🎧 Audio Player
+                      if (type.startsWith("audio/")) {
+                        const toggleAudio = () => {
+                          if (!audioFileRef.current) return;
 
-                      return (
-                        <div key={file._id} className="flex items-center gap-2">
-                          <button
-                            onClick={toggleAudio}
-                            className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                          if (isPlayingFile) {
+                            audioFileRef.current.pause();
+                          } else {
+                            audioFileRef.current.play();
+                          }
+                          setIsPlayingFile(!isPlayingFile);
+                        };
+
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-2"
                           >
-                            {isPlayingFile ? (
-                              <Pause className="w-4 h-4" />
-                            ) : (
-                              <Play className="w-4 h-4" />
-                            )}
-                          </button>
-                          <audio ref={audioFileRef} src={file.url} />
-                          <span className="text-sm">{file.fileName}</span>
+                            <button
+                              onClick={toggleAudio}
+                              className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                            >
+                              {isPlayingFile ? (
+                                <Pause className="w-4 h-4" />
+                              ) : (
+                                <Play className="w-4 h-4" />
+                              )}
+                            </button>
+                            <audio ref={audioFileRef} src={file.fileUrl} />
+                            <span className="text-sm">{file.fileName}</span>
+                          </div>
+                        );
+                      }
+
+                      // 🎥 Video Preview
+                      if (type.startsWith("video/")) {
+                        return (
+                          <div key={file.id} className="space-y-2">
+                            <video
+                              src={file.fileUrl}
+                              controls
+                              className="w-72 rounded-lg shadow-md"
+                            />
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {file.fileName}
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      // 📄 PDF Preview (open in new tab instead of iframe)
+                      if (type === "application/pdf") {
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center justify-between p-3 border rounded-lg shadow-sm"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                                <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-800 dark:text-gray-200">
+                                  {file.fileName}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  PDF Document
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <a
+                                href={file.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                              >
+                                Open PDF
+                              </a>
+                              <a
+                                href={file.fileUrl}
+                                download={file.fileName}
+                                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                              >
+                                Download
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // 📝 DOCX / Other Files — provide download link
+                      return (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between p-3 border rounded-lg shadow-sm"
+                        >
+                          <div>
+                            <p className="font-medium text-gray-800 dark:text-gray-200">
+                              {file.fileName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {file.fileType}
+                            </p>
+                          </div>
+                          <a
+                            href={file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 text-sm hover:underline"
+                          >
+                            Download
+                          </a>
                         </div>
                       );
-                    }
-                    return null;
-                  })}
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <Card>
@@ -500,10 +547,10 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                   {capsuleAccess?.locked
                     ? capsuleAccess.reason
                     : capsule.unlockDate
-                    ? `Come back on ${formatDate(
-                        capsule.unlockDate
-                      )} to read your message from the past.`
-                    : "Waiting for unlock conditions to be met."}
+                      ? `Come back on ${formatDate(
+                          capsule.unlockDate
+                        )} to read your message from the past.`
+                      : "Waiting for unlock conditions to be met."}
                 </p>
                 {capsule.unlockDate && (
                   <div className="max-w-md mx-auto mb-4">

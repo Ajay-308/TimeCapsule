@@ -144,7 +144,7 @@ model File {
   fileName      String
   fileType      String
   fileSize      Int
-  encryptionKey String
+  fileUrl       String?
   uploadedBy    String
   createdAt     DateTime @default(now())
 

@@ -147,29 +147,29 @@ export default function CreateCapsulePage() {
 
     return true;
   };
-
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      console.log("uploading file ", file.name);
-      console.log("formData", formData.get("file"));
+      // Note: We don't send capsuleId here since capsule doesn't exist yet
+      console.log("Uploading:", file.name);
 
       const res = await fetch("/api/file/upload", {
         method: "POST",
         body: formData,
       });
+
+      const data = await res.json();
       if (!res.ok) {
-        throw new Error("Upload failed with status:");
+        throw new Error(
+          data.error || `Upload failed with status ${res.status}`
+        );
       }
 
-      if (!res.ok) throw new Error("Upload failed");
-
-      const { storageId } = await res.json();
-      return storageId;
+      // Return the fileId (database ID) not storageId
+      return data.fileId;
     } catch (error) {
       console.error("File upload error:", error);
-
       toast.error("Upload Failed", {
         description: `Failed to upload ${file.name}`,
       });
@@ -178,48 +178,48 @@ export default function CreateCapsulePage() {
   };
 
   const createCapsule = async () => {
-    console.log("call create function");
+    console.log("Creating capsule...");
     if (!validateForm()) return;
 
     setIsCreating(true);
     try {
-      // Generate encryption key
-      const encryptionKey = crypto
-        .getRandomValues(new Uint8Array(32))
-        .reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
+      const encryptionKey = Array.from(
+        crypto.getRandomValues(new Uint8Array(32))
+      )
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
 
-      // Upload files if any
+      // Upload file first if there are attachments
       let fileId: string | undefined;
       if (attachments.length > 0) {
-        // For simplicity, upload only the first file
-        // You can modify this to handle multiple files
         const uploadedFileId = await uploadFile(attachments[0]);
         if (uploadedFileId) {
           fileId = uploadedFileId;
+        } else {
+          // If file upload fails, ask user if they want to continue
+          const continueWithoutFile = confirm(
+            "File upload failed. Continue without attachment?"
+          );
+          if (!continueWithoutFile) {
+            setIsCreating(false);
+            return;
+          }
         }
       }
 
-      // Prepare unlock timestamp
       const unlockTimestamp = new Date(
-        `${unlockDate}T${unlockTime || "00:00"}`
+        `${unlockDate}T${unlockTime || "00:00"}:00`
       ).getTime();
 
-      // Prepare location data
       const locationData =
         geoLock && latitude && longitude
-          ? {
-              latitude,
-              longitude,
-              radius,
-              placeName: location,
-            }
+          ? { latitude, longitude, radius, placeName: location }
           : undefined;
 
-      // Create capsule
       const result = await createCapsuleMutation.mutateAsync({
         title: title.trim(),
         content: message.trim(),
-        fileId: fileId ? (fileId as string) : undefined,
+        fileId, // This is the database file ID
         encryptionKey,
         unlockDate: unlockTimestamp,
         location: locationData,
@@ -227,20 +227,30 @@ export default function CreateCapsulePage() {
         isPublic: capsuleType === "public" ? true : isPublic,
       });
 
+      // If we have a fileId, update it with the capsuleId
+      if (fileId && result.capsuleId) {
+        try {
+          await fetch(`/api/file/${fileId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ capsuleId: result.capsuleId }),
+          });
+        } catch (error) {
+          console.error("Failed to link file to capsule:", error);
+        }
+      }
+
       toast.success("Time Capsule Created!", {
-        description: `Your capsule "${title}" will unlock on ${new Date(
-          unlockTimestamp
-        ).toLocaleDateString()}.`,
+        description: `Your capsule "${title}" will unlock on ${new Date(unlockTimestamp).toLocaleString()}.`,
       });
 
-      // Redirect to the created capsule or dashboard
       router.push(`/capsule/${result.capsuleId}`);
     } catch (error) {
       console.error("Error creating capsule:", error);
       toast.error("Creation Failed", {
         description:
           (error as Error)?.message ||
-          "There was an error creating your time capsule. Please try again.",
+          "There was an error creating your time capsule.",
       });
     } finally {
       setIsCreating(false);
