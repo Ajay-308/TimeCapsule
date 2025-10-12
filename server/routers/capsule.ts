@@ -216,7 +216,25 @@ export const capsuleRouter = createTRPCRouter({
     }
 
     return await ctx.prisma.capsule.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, isArchived: false },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
+
+  getArchived: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.prisma.user.findUnique({
+      where: { clerkId: ctx.userId },
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    return await ctx.prisma.capsule.findMany({
+      where: { userId: user.id, isArchived: true },
       orderBy: { createdAt: "desc" },
     });
   }),
@@ -256,6 +274,32 @@ export const capsuleRouter = createTRPCRouter({
 
     return { totalCapsules, unlockedCapsules, totalViews, totalLikes };
   }),
+  archiveCapsule: protectedProcedure
+    .input(z.object({ capsuleId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.prisma.capsule.update({
+        where: { id: input.capsuleId },
+        data: { isArchived: true },
+      });
+    }),
+  unarchiveCapsule: protectedProcedure
+    .input(z.object({ capsuleId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.prisma.capsule.update({
+        where: { id: input.capsuleId },
+        data: { isArchived: false },
+      });
+    }),
+
+  // unarchiveCapsule: protectedProcedure
+  //   .input(z.object({ id: z.string() }))
+  //   .mutation(async ({ ctx, input }) => {
+  //     // Update capsule in your database
+  //     return await ctx.prisma.capsule.update({
+  //       where: { id: input.id },
+  //       data: { archived: false },
+  //     });
+  //   }),
 
   likeCapsule: protectedProcedure
     .input(z.object({ wallId: z.string() }))

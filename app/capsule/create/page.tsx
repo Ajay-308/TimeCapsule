@@ -241,7 +241,9 @@ export default function CreateCapsulePage() {
       }
 
       toast.success("Time Capsule Created!", {
-        description: `Your capsule "${title}" will unlock on ${new Date(unlockTimestamp).toLocaleString()}.`,
+        description: `Your capsule "${title}" will unlock on ${new Date(
+          unlockTimestamp
+        ).toLocaleString()}.`,
       });
 
       router.push(`/capsule/${result.capsuleId}`);
@@ -315,11 +317,13 @@ export default function CreateCapsulePage() {
                 <ArrowLeft className="size-4" />
               </Button>
             </Link>
-            <div className="flex items-center gap-2 font-bold">
+            <div className="flex items-center gap-2 font-bold cursor-pointer">
               <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground">
                 <Clock className="size-4" />
               </div>
-              <span>TimeCapsule</span>
+              <Link href="/dashboard">
+                <span>TimeCapsule</span>
+              </Link>
             </div>
           </div>
           <div className="flex items-center gap-4">

@@ -67,6 +67,7 @@ model Capsule {
   fileId            String?
   encryptionKey     String
   unlockDate        DateTime
+  isArchived        Boolean @default(false)
   location          Json?
   isUnlocked        Boolean   @default(false)
   isOneTimeAccess   Boolean

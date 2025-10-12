@@ -42,7 +42,6 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
   const { id } = useParams();
   const audioFileRef = useRef<HTMLAudioElement>(null);
   const [isPlayingFile, setIsPlayingFile] = useState(false);
-  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [copied, setCopied] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
@@ -114,28 +113,6 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getFileIcon = (type: string) => {
-    if (type.startsWith("image/")) {
-      return <ImageIcon className="size-4" />;
-    } else if (type.startsWith("video/")) {
-      return <Video className="size-4" />;
-    } else if (type.startsWith("audio/")) {
-      return <Music className="size-4" />;
-    } else {
-      return <FileText className="size-4" />;
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return (
-      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i]
-    );
   };
 
   const getTimeRemaining = (unlockDate: number | Date) => {
@@ -221,7 +198,9 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
               <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground">
                 <Clock className="size-4" />
               </div>
-              <span>TimeCapsule</span>
+              <Link href="/dashboard">
+                <span>TimeCapsule</span>
+              </Link>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -320,8 +299,8 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                   {isUnlocked
                     ? "Ready to view"
                     : capsuleAccess?.locked
-                      ? capsuleAccess.reason
-                      : "Waiting for unlock conditions"}
+                    ? capsuleAccess.reason
+                    : "Waiting for unlock conditions"}
                 </p>
               </CardContent>
             </Card>
@@ -547,10 +526,10 @@ export default function CapsuleViewPage({ params }: CapsulePageProps) {
                   {capsuleAccess?.locked
                     ? capsuleAccess.reason
                     : capsule.unlockDate
-                      ? `Come back on ${formatDate(
-                          capsule.unlockDate
-                        )} to read your message from the past.`
-                      : "Waiting for unlock conditions to be met."}
+                    ? `Come back on ${formatDate(
+                        capsule.unlockDate
+                      )} to read your message from the past.`
+                    : "Waiting for unlock conditions to be met."}
                 </p>
                 {capsule.unlockDate && (
                   <div className="max-w-md mx-auto mb-4">

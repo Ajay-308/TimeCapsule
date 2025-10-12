@@ -47,6 +47,12 @@ export default function DashboardPage() {
   // Fetch data from tRPC
   const { data: capsules } = trpc.capsule.listUserCapsules.useQuery();
   const { data: stats } = trpc.capsule.userStats.useQuery();
+  const utils = trpc.useUtils();
+  const archiveMutation = trpc.capsule.archiveCapsule.useMutation({
+    onSuccess: () => {
+      utils.capsule.listUserCapsules.invalidate(); // refresh list
+    },
+  });
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -84,6 +90,7 @@ export default function DashboardPage() {
 
   const filteredCapsules =
     capsules?.filter((capsule: any) => {
+      if (capsule.isArchived) return false;
       const matchesSearch = capsule.title
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
@@ -298,10 +305,19 @@ export default function DashboardPage() {
                                     <Share2 className="size-4 mr-2" />
                                     Share
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      archiveMutation.mutate({
+                                        capsuleId: capsule.id,
+                                      })
+                                    }
+                                  >
                                     <Archive className="size-4 mr-2" />
-                                    Archive
+                                    {archiveMutation.isPending
+                                      ? "Archiving..."
+                                      : "Archive"}
                                   </DropdownMenuItem>
+
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem className="text-destructive">
                                     <Trash2 className="size-4 mr-2" />
@@ -404,13 +420,15 @@ export default function DashboardPage() {
                     <span className="text-sm">Public Wall</span>
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  className="w-full h-20 flex-col gap-2 bg-transparent"
-                >
-                  <Archive className="size-6" />
-                  <span className="text-sm">Archive</span>
-                </Button>
+                <Link href="/archive">
+                  <Button
+                    variant="outline"
+                    className="w-full h-20 flex-col gap-2 bg-transparent"
+                  >
+                    <Archive className="size-6" />
+                    <span className="text-sm">Archive</span>
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   className="w-full h-20 flex-col gap-2 bg-transparent"
