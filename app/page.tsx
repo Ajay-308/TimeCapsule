@@ -163,10 +163,15 @@ export default function LandingPage() {
                 messages from the past.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="rounded-full h-12 px-8 text-base">
-                  Create Your First Capsule
-                  <ArrowRight className="ml-2 size-4" />
-                </Button>
+                <SignInButton>
+                  <Button
+                    size="lg"
+                    className="rounded-full h-12 px-8 text-base"
+                  >
+                    Create Your First Capsule
+                    <ArrowRight className="ml-2 size-4" />
+                  </Button>
+                </SignInButton>
                 <Button
                   size="lg"
                   variant="outline"
@@ -862,14 +867,16 @@ export default function LandingPage() {
                 digital time capsules.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="rounded-full h-12 px-8 text-base"
-                >
-                  Create Your First Capsule
-                  <ArrowRight className="ml-2 size-4" />
-                </Button>
+                <SignInButton>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="rounded-full h-12 px-8 text-base"
+                  >
+                    Create Your First Capsule
+                    <ArrowRight className="ml-2 size-4" />
+                  </Button>
+                </SignInButton>
                 <Button
                   size="lg"
                   variant="outline"

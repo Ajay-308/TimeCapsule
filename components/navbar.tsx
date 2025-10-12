@@ -108,10 +108,12 @@ export default function Navbar() {
                   Sign In
                 </Button>
               </SignInButton>
-              <Button className="rounded-full">
-                Create Capsule
-                <ChevronRight className="ml-1 size-4" />
-              </Button>
+              <SignInButton>
+                <Button className="rounded-full">
+                  Create Capsule
+                  <ChevronRight className="ml-1 size-4" />
+                </Button>
+              </SignInButton>
             </div>
           )}
         </div>
@@ -209,10 +211,12 @@ export default function Navbar() {
                       Sign In
                     </Button>
                   </SignInButton>
-                  <Button className="rounded-full cursor-pointer">
-                    Create Capsule
-                    <ChevronRight className="ml-1 size-4" />
-                  </Button>
+                  <SignInButton>
+                    <Button className="rounded-full cursor-pointer">
+                      Create Capsule
+                      <ChevronRight className="ml-1 size-4" />
+                    </Button>
+                  </SignInButton>
                 </>
               )}
             </div>
