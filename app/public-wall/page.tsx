@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
+import Navbar from "@/components/navbar";
 
 const categories = [
   "All Categories",
@@ -88,27 +89,7 @@ export default function PublicWallPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-lg bg-background/80 border-b">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <ArrowLeft className="size-4" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2 font-bold">
-              <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground">
-                <Clock className="size-4" />
-              </div>
-              <span>TimeCapsule</span>
-            </div>
-          </div>
-          <Link href="/capsule/create">
-            <Button className="rounded-full">Create Capsule</Button>
-          </Link>
-        </div>
-      </header>
-
+      <Navbar />
       <main className="container py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

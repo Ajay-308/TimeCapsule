@@ -521,16 +521,15 @@ export default function LandingPage() {
                         description:
                           "Perfect for personal time capsules and memories.",
                         features: [
-                          "Up to 5 time capsules",
-                          "Text messages only",
-                          "1GB storage",
+                          "Up to 2 time capsules",
                           "Email notifications",
+                          "Check how its work",
                         ],
                         cta: "Start Free",
                       },
                       {
                         name: "Family",
-                        price: "$9",
+                        price: "$5",
                         description: "Ideal for families and close friends.",
                         features: [
                           "Up to 50 time capsules",
@@ -540,11 +539,10 @@ export default function LandingPage() {
                           "Priority support",
                         ],
                         cta: "Start Free Trial",
-                        popular: true,
                       },
                       {
                         name: "Legacy",
-                        price: "$29",
+                        price: "$12",
                         description:
                           "For preserving memories across generations.",
                         features: [
@@ -556,6 +554,7 @@ export default function LandingPage() {
                           "White-label options",
                         ],
                         cta: "Start Free Trial",
+                        popular: true,
                       },
                     ].map((plan, i) => (
                       <motion.div
@@ -641,16 +640,14 @@ export default function LandingPage() {
                         description:
                           "Perfect for personal time capsules and memories.",
                         features: [
-                          "Up to 5 time capsules",
-                          "Text messages only",
-                          "1GB storage",
+                          "Up to 2 time capsules",
                           "Email notifications",
                         ],
                         cta: "Start Free",
                       },
                       {
                         name: "Family",
-                        price: "$7",
+                        price: "$9",
                         description: "Ideal for families and close friends.",
                         features: [
                           "Up to 50 time capsules",
@@ -705,7 +702,7 @@ export default function LandingPage() {
                               </span>
                               {plan.price !== "Free" && (
                                 <span className="text-muted-foreground ml-1">
-                                  /month
+                                  /year
                                 </span>
                               )}
                             </div>

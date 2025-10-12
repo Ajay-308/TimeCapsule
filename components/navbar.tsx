@@ -40,7 +40,9 @@ export default function Navbar() {
           <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground">
             <Clock className="size-4" />
           </div>
-          <span>TimeCapsule</span>
+          <Link href="\dashboard">
+            <span>TimeCapsule</span>
+          </Link>
         </div>
 
         {/* Desktop Navigation */}

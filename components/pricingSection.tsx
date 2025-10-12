@@ -10,9 +10,6 @@ type BillingCycle = "monthly" | "annually";
 export function PricingSection() {
   const [billing, setBilling] = useState<BillingCycle>("monthly");
   const { pay } = useRazorpay();
-  const handlePayment = () => {
-    const res = fetch("/api/payment");
-  };
 
   const saveBadge =
     "rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground";
@@ -71,6 +68,7 @@ export function PricingSection() {
           title="Personal"
           description="Perfect for personal time capsules and memories."
           priceMonthly={0}
+          priceAnnually={0}
           features={[
             "Up to 5 time capsules",
             "Text messages only",
@@ -84,7 +82,8 @@ export function PricingSection() {
         <PricingCard
           title="Family"
           description="Ideal for families and close friends."
-          priceMonthly={9}
+          priceMonthly={5}
+          priceAnnually={9}
           features={[
             "Up to 50 time capsules",
             "Photos & videos",
@@ -95,13 +94,20 @@ export function PricingSection() {
           cta="Start Free Trial"
           billing={billing}
           highlight
-          onClick={() => pay({ name: "Family", price: "$1", billing })}
+          onClick={() =>
+            pay({
+              name: "Family",
+              price: billing === "monthly" ? "$5" : "$9",
+              billing,
+            })
+          }
         />
 
         <PricingCard
           title="Legacy"
           description="For preserving memories across generations."
-          priceMonthly={29}
+          priceMonthly={12}
+          priceAnnually={23}
           features={[
             "Unlimited time capsules",
             "All media types",
@@ -112,6 +118,13 @@ export function PricingSection() {
           ]}
           cta="Start Free Trial"
           billing={billing}
+          onClick={() =>
+            pay({
+              name: "Legacy",
+              price: billing === "monthly" ? "$12" : "$23",
+              billing,
+            })
+          }
         />
       </div>
     </section>

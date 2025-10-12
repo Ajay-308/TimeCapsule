@@ -14,7 +14,8 @@ type BillingCycle = "monthly" | "annually";
 export type PricingCardProps = {
   title: string;
   description: string;
-  priceMonthly: number | null; // null => Free
+  priceMonthly: number | null;
+  priceAnnually?: number | null;
   features: string[];
   cta: string;
   highlight?: boolean;
@@ -26,21 +27,26 @@ export function PricingCard({
   title,
   description,
   priceMonthly,
+  priceAnnually,
   features,
   cta,
   highlight,
   billing,
   onClick,
 }: PricingCardProps) {
+  // Determine which price to show
   const price =
     priceMonthly == null
       ? "Free"
       : billing === "monthly"
       ? `$${priceMonthly}`
-      : `$${Math.round(priceMonthly * 0.8)}`;
+      : priceAnnually != null
+      ? `$${priceAnnually}`
+      : `$${Math.round(priceMonthly * 0.8)}`; // fallback 20% off if annual not provided
 
+  // Determine subtext (/month or /year)
   const sub =
-    priceMonthly == null ? "" : billing === "monthly" ? "/month" : "/month";
+    priceMonthly == null ? "" : billing === "monthly" ? "/month" : "/year";
 
   return (
     <Card
@@ -53,7 +59,6 @@ export function PricingCard({
     >
       {highlight && (
         <div className="absolute right-3 top-3">
-          {/* using badge from shadcn if available; fallback is styled span */}
           <Badge
             className="border-0 bg-(--color-chart-3) text-(--color-foreground)"
             variant="default"
@@ -62,6 +67,7 @@ export function PricingCard({
           </Badge>
         </div>
       )}
+
       <CardHeader className="space-y-2">
         <h3 className="text-balance text-xl font-semibold">{title}</h3>
         <div className="flex items-end gap-1">

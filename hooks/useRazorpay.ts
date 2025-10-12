@@ -42,7 +42,7 @@ export function useRazorpay() {
 
         // ✅ Call your tRPC backend to create an order
         const order = await createOrder.mutateAsync({
-          amount,
+          amount: amount * 88.72,
           planName: name,
           billing,
         });
