@@ -429,13 +429,15 @@ export default function DashboardPage() {
                     <span className="text-sm">Archive</span>
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  className="w-full h-20 flex-col gap-2 bg-transparent"
-                >
-                  <Settings className="size-6" />
-                  <span className="text-sm">Settings</span>
-                </Button>
+                <Link href="/setting">
+                  <Button
+                    variant="outline"
+                    className="w-full h-20 flex-col gap-2 bg-transparent"
+                  >
+                    <Settings className="size-6" />
+                    <span className="text-sm">Settings</span>
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
