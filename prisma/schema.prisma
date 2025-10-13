@@ -29,6 +29,12 @@ model User {
   subscriptionEndDate      DateTime?
   subscriptionCancelledAt  DateTime?
 
+  theme                   String?   @default("system")
+  emailNotifications      Boolean   @default(true)
+  pushNotifications       Boolean   @default(false)
+  allowCollaborations     Boolean   @default(true)
+  showOnPublicWall        Boolean   @default(true)
+
   // Relations
   capsules                 Capsule[]
   files                    File[]

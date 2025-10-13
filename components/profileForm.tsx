@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useTrpcUser } from "@/hooks/useTrpcUser";
 import { trpc } from "@/lib/trpc";
+import { useUser } from "@clerk/nextjs";
 
 function getInitials(name?: string) {
   if (!name) return "U";
@@ -26,60 +26,53 @@ function getInitials(name?: string) {
     .join("");
 }
 
-export function ProfileForm(props: { clerkId?: string }) {
-  const { clerkId } = props;
+export function ProfileForm() {
+  const { user: clerkUser } = useUser();
   const { toast } = useToast();
-  const { data, isLoading } = useTrpcUser(clerkId);
-  const syncUserMutation = trpc.user.syncUser.useMutation();
 
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("you@example.com");
-  const [image, setImage] = React.useState<string | undefined>(undefined);
-  const [saving, setSaving] = React.useState(false);
+  const { data, isLoading } = trpc.user.getUser.useQuery(
+    { clerkId: clerkUser?.id || "" },
+    { enabled: !!clerkUser?.id }
+  );
 
-  React.useEffect(() => {
+  const updateProfileMutation = trpc.user.updateProfile.useMutation();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
     if (data?.exists && data.user) {
-      setName((prev) => (prev ? prev : data.user.name ?? ""));
-      setEmail((prev) =>
-        prev && prev !== "you@example.com" ? prev : data.user.email ?? ""
-      );
-      setImage((prev) => (prev ? prev : data.user.image ?? undefined));
+      setName(data.user.name || "");
+      setEmail(data.user.email || "");
     }
   }, [data]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clerkId) {
+    if (!clerkUser?.id) {
       toast({
-        title: "Missing clerkId",
-        description:
-          "Provide a clerkId prop to ProfileForm so we can call tRPC.",
+        title: "Not authenticated",
+        description: "Please sign in to update your profile.",
         variant: "destructive",
       });
       return;
     }
+
     setSaving(true);
     try {
-      const res = await syncUserMutation.mutateAsync({
+      await updateProfileMutation.mutateAsync({
         name,
         email,
-        image: image || "",
-        clerkId,
       });
-      if (res?.user) {
-        toast({
-          title: "Profile saved",
-          description: "Your profile has been updated.",
-        });
-      } else {
-        toast({
-          title: "Profile synced",
-          description: "User created successfully.",
-        });
-      }
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
     } catch (err: any) {
       toast({
-        title: "Save failed",
+        title: "Update failed",
         description: err?.message || "An unexpected error occurred.",
         variant: "destructive",
       });
@@ -88,53 +81,22 @@ export function ProfileForm(props: { clerkId?: string }) {
     }
   }
 
-  function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setImage(url);
-    console.log("[v0] Avatar selected", { name: file.name, size: file.size });
-  }
-
   return (
     <Card aria-labelledby="profile-heading">
       <CardHeader>
         <CardTitle id="profile-heading">Profile</CardTitle>
-        <CardDescription>
-          Update your name, avatar, and email address.
-        </CardDescription>
+        <CardDescription>Update your name and email address.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-6 sm:grid-cols-2">
-          {!clerkId && (
-            <div className="col-span-full">
-              <p className="text-xs text-muted-foreground">
-                Tip: pass a clerkId to ProfileForm (e.g., from your auth) to
-                enable tRPC syncing.
-              </p>
-            </div>
-          )}
           <div className="col-span-full flex items-center gap-4">
             <Avatar className="h-14 w-14">
               <AvatarImage
-                src={image || "/placeholder.svg"}
+                src={clerkUser?.imageUrl || "/placeholder.svg"}
                 alt={name ? `${name}'s avatar` : "Your avatar"}
               />
               <AvatarFallback>{getInitials(name)}</AvatarFallback>
             </Avatar>
-            <div>
-              <Label htmlFor="avatar">Avatar</Label>
-              <Input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={onImageChange}
-                className="mt-2"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                PNG, JPG up to 2MB.
-              </p>
-            </div>
           </div>
 
           <div className="space-y-2">

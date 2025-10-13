@@ -20,11 +20,40 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { trpc } from "@/lib/trpc";
+import { useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
+import { useState } from "react";
 
 export function DangerZone() {
-  function onDelete() {
-    console.log("[v0] Delete account confirmed");
-    // TODO: call server action / API to delete account
+  const { toast } = useToast();
+  const router = useRouter();
+  const { signOut } = useClerk();
+  const deleteAccountMutation = trpc.user.deleteAccount.useMutation();
+  const [deleting, setDeleting] = useState(false);
+
+  async function onDelete() {
+    setDeleting(true);
+    try {
+      await deleteAccountMutation.mutateAsync();
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+
+      // Sign out and redirect to home
+      await signOut();
+      router.push("/");
+    } catch (err: any) {
+      toast({
+        title: "Deletion failed",
+        description: err?.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      setDeleting(false);
+    }
   }
 
   return (
@@ -44,7 +73,9 @@ export function DangerZone() {
       <CardFooter>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive">Delete Account</Button>
+            <Button variant="destructive" disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete Account"}
+            </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -56,7 +87,9 @@ export function DangerZone() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
+              <AlertDialogAction onClick={onDelete} disabled={deleting}>
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

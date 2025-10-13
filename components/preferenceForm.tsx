@@ -18,9 +18,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { trpc } from "@/lib/trpc";
+import { useUser } from "@clerk/nextjs";
+import { useTheme } from "next-themes";
 
 export function PreferencesForm() {
-  const [theme, setTheme] = React.useState<"system" | "light" | "dark">(
+  const { user } = useUser();
+  const { toast } = useToast();
+  const { setTheme } = useTheme();
+
+  const { data: preferences, isLoading } = trpc.user.getPreferences.useQuery(
+    undefined,
+    { enabled: !!user?.id }
+  );
+
+  const updatePreferencesMutation = trpc.user.updatePreferences.useMutation();
+
+  const [theme, setThemeState] = React.useState<"system" | "light" | "dark">(
     "system"
   );
   const [emailNotifs, setEmailNotifs] = React.useState(true);
@@ -29,17 +44,43 @@ export function PreferencesForm() {
   const [publicWall, setPublicWall] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 
+  React.useEffect(() => {
+    if (preferences) {
+      setThemeState(preferences.theme || "system");
+      setEmailNotifs(preferences.emailNotifications ?? true);
+      setPushNotifs(preferences.pushNotifications ?? false);
+      setCollaborations(preferences.allowCollaborations ?? true);
+      setPublicWall(preferences.showOnPublicWall ?? true);
+    }
+  }, [preferences]);
+
   async function onSave() {
     setSaving(true);
-    console.log("[v0] Saving preferences", {
-      theme,
-      emailNotifs,
-      pushNotifs,
-      collaborations,
-      publicWall,
-    });
-    await new Promise((r) => setTimeout(r, 500));
-    setSaving(false);
+    try {
+      await updatePreferencesMutation.mutateAsync({
+        theme,
+        emailNotifications: emailNotifs,
+        pushNotifications: pushNotifs,
+        allowCollaborations: collaborations,
+        showOnPublicWall: publicWall,
+      });
+
+      // Update the actual theme
+      setTheme(theme);
+
+      toast({
+        title: "Preferences saved",
+        description: "Your preferences have been successfully updated.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Save failed",
+        description: err?.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -53,7 +94,11 @@ export function PreferencesForm() {
       <CardContent className="grid gap-6">
         <div className="grid gap-2 sm:max-w-sm">
           <Label>Theme</Label>
-          <Select value={theme} onValueChange={(v: any) => setTheme(v)}>
+          <Select
+            value={theme}
+            onValueChange={(v: "system" | "light" | "dark") => setThemeState(v)}
+            disabled={isLoading}
+          >
             <SelectTrigger aria-label="Theme selector">
               <SelectValue placeholder="Select theme" />
             </SelectTrigger>
@@ -77,6 +122,7 @@ export function PreferencesForm() {
               checked={emailNotifs}
               onCheckedChange={setEmailNotifs}
               aria-label="Toggle email notifications"
+              disabled={isLoading}
             />
           </div>
 
@@ -91,6 +137,7 @@ export function PreferencesForm() {
               checked={pushNotifs}
               onCheckedChange={setPushNotifs}
               aria-label="Toggle push notifications"
+              disabled={isLoading}
             />
           </div>
 
@@ -105,6 +152,7 @@ export function PreferencesForm() {
               checked={collaborations}
               onCheckedChange={setCollaborations}
               aria-label="Toggle collaborations"
+              disabled={isLoading}
             />
           </div>
 
@@ -119,12 +167,13 @@ export function PreferencesForm() {
               checked={publicWall}
               onCheckedChange={setPublicWall}
               aria-label="Toggle public wall visibility"
+              disabled={isLoading}
             />
           </div>
         </div>
 
         <div>
-          <Button onClick={onSave} disabled={saving}>
+          <Button onClick={onSave} disabled={saving || isLoading}>
             {saving ? "Saving..." : "Save preferences"}
           </Button>
         </div>

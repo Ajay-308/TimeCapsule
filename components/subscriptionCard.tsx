@@ -12,24 +12,70 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-
-type Subscription = {
-  plan: string | null;
-  status: string | null;
-  billing: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
-};
+import { useToast } from "@/hooks/use-toast";
+import { trpc } from "@/lib/trpc";
+import { useRouter } from "next/navigation";
 
 export function SubscriptionCard() {
-  // Placeholder data. Wire this up to your billing provider later.
-  const [sub] = React.useState<Subscription>({
-    plan: "Free",
-    status: "active",
-    billing: "monthly",
-    startDate: new Date().toISOString(),
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const { data: subscription, isLoading } =
+    trpc.payment.getUserSubscription.useQuery();
+  const cancelSubscriptionMutation =
+    trpc.payment.cancelSubscription.useMutation();
+
+  const [canceling, setCanceling] = React.useState(false);
+
+  async function handleCancelSubscription() {
+    setCanceling(true);
+    try {
+      await cancelSubscriptionMutation.mutateAsync();
+
+      toast({
+        title: "Subscription cancelled",
+        description: "Your subscription has been cancelled successfully.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Cancellation failed",
+        description: err?.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  function handleManageSubscription() {
+    toast({
+      title: "Coming soon",
+      description: "Subscription management portal is being developed.",
+    });
+  }
+
+  function handleUpgradePlan() {
+    router.push("/pricing");
+  }
+
+  if (isLoading) {
+    return (
+      <Card aria-labelledby="subscription-heading">
+        <CardHeader>
+          <CardTitle id="subscription-heading">Subscription</CardTitle>
+          <CardDescription>Loading subscription details...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const sub = subscription || {
+    plan: "Personal",
+    status: "free",
+    billing: null,
+    startDate: null,
     endDate: null,
-  });
+  };
 
   return (
     <Card aria-labelledby="subscription-heading">
@@ -43,9 +89,14 @@ export function SubscriptionCard() {
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Current plan</div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-base font-medium">{sub.plan ?? "—"}</span>
+            <span className="text-base font-medium">
+              {sub.plan || "Personal"}
+            </span>
             {sub.status && (
-              <Badge variant="secondary" aria-label={`Status ${sub.status}`}>
+              <Badge
+                variant={sub.status === "active" ? "default" : "secondary"}
+                aria-label={`Status ${sub.status}`}
+              >
                 {sub.status}
               </Badge>
             )}
@@ -53,7 +104,9 @@ export function SubscriptionCard() {
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Billing</div>
-          <div className="mt-1 text-base font-medium">{sub.billing ?? "—"}</div>
+          <div className="mt-1 text-base font-medium capitalize">
+            {sub.billing || "—"}
+          </div>
         </div>
         <div className="rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Since</div>
@@ -64,24 +117,25 @@ export function SubscriptionCard() {
       </CardContent>
       <Separator className="my-2" />
       <CardFooter className="flex flex-wrap gap-2">
-        <Button
-          variant="default"
-          onClick={() => console.log("[v0] Manage subscription")}
-        >
-          Manage Subscription
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => console.log("[v0] Upgrade plan")}
-        >
-          Upgrade Plan
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => console.log("[v0] Cancel subscription")}
-        >
-          Cancel
-        </Button>
+        {sub.status === "active" && (
+          <Button variant="default" onClick={handleManageSubscription}>
+            Manage Subscription
+          </Button>
+        )}
+        {(sub.status === "free" || sub.plan === "Personal") && (
+          <Button variant="default" onClick={handleUpgradePlan}>
+            Upgrade Plan
+          </Button>
+        )}
+        {sub.status === "active" && (
+          <Button
+            variant="outline"
+            onClick={handleCancelSubscription}
+            disabled={canceling}
+          >
+            {canceling ? "Cancelling..." : "Cancel"}
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
