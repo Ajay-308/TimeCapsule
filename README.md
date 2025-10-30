@@ -1,4 +1,4 @@
-# TimeCapsule
+# TimeCapsule ( Building phase )
 
 A modern, full‑stack Next.js application for creating, storing, and unlocking “time capsules.” The goal is to let users save content that becomes accessible at a future date—securely, reliably, and with a great developer experience.
 
